@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { connection } from "next/server";
 import { auth } from "@/auth";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -34,44 +35,44 @@ export default async function Home() {
   const dbStatus = await checkDatabase();
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#134e4a,transparent_30%),linear-gradient(180deg,#020617_0%,#0f172a_45%,#111827_100%)] px-6 py-16 text-zinc-50">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#5d4520,transparent_24%),linear-gradient(180deg,#060606_0%,#0b0906_42%,#020202_100%)] px-6 py-16 text-[#fff1cc]">
       <div className="mx-auto flex max-w-5xl flex-col gap-8">
-        <section className="rounded-[2rem] border border-zinc-800 bg-zinc-900/80 p-8 shadow-2xl shadow-black/30">
+        <section className="rounded-[2rem] border border-[#7d6230]/25 bg-[linear-gradient(180deg,rgba(17,17,17,0.96),rgba(8,8,8,0.94))] p-8 shadow-2xl shadow-black/50">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-emerald-400">
-                Tradex Auth
-              </p>
+              <Image
+                src="/logo.png"
+                alt="AlphaLedger"
+                width={600}
+                height={600}
+                priority
+                className="h-[86px] w-[320px] object-contain object-left"
+              />
               <h1 className="mt-4 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
                 Email/password login and Google sign-in are now part of the app.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-zinc-400">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-[#cbb995]">
                 The stack uses Next.js App Router, Prisma, Neon Postgres, and
                 Auth.js with credentials plus optional Google OAuth.
               </p>
             </div>
 
             {session?.user ? (
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
-                >
-                  Open Dashboard
-                </Link>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <p className="text-sm text-[#d9c59d]">You are signed in.</p>
                 <SignOutButton />
               </div>
             ) : (
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/login"
-                  className="inline-flex items-center justify-center rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300"
+                  className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 py-3 text-sm font-semibold text-[#140d05] transition hover:brightness-110"
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-700 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
+                  className="inline-flex items-center justify-center rounded-2xl border border-[#6f592d]/40 bg-[linear-gradient(180deg,rgba(22,22,22,0.95),rgba(8,8,8,0.96))] px-4 py-3 text-sm font-medium text-[#f3deb0] transition hover:border-[#9f7c3a]/55 hover:bg-[linear-gradient(180deg,rgba(28,28,28,0.96),rgba(10,10,10,0.98))]"
                 >
                   Register
                 </Link>
@@ -81,36 +82,36 @@ export default async function Home() {
         </section>
 
         <section className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-[2rem] border border-zinc-800 bg-zinc-900/80 p-6">
+          <div className="rounded-[2rem] border border-[#7d6230]/25 bg-[linear-gradient(180deg,rgba(17,17,17,0.96),rgba(8,8,8,0.94))] p-6">
             <h2 className="text-lg font-semibold">Session</h2>
-            <div className="mt-5 space-y-3 text-sm text-zinc-300">
+            <div className="mt-5 space-y-3 text-sm text-[#e2d0aa]">
               <p>
-                <span className="text-zinc-500">Status:</span>{" "}
+                <span className="text-[#ab9567]">Status:</span>{" "}
                 {session?.user ? "Authenticated" : "Guest"}
               </p>
               <p>
-                <span className="text-zinc-500">User:</span>{" "}
+                <span className="text-[#ab9567]">User:</span>{" "}
                 {session?.user?.email ?? "Not signed in"}
               </p>
               {session?.user?.role ? (
                 <p>
-                  <span className="text-zinc-500">Role:</span>{" "}
+                  <span className="text-[#ab9567]">Role:</span>{" "}
                   {session.user.role}
                 </p>
               ) : null}
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-zinc-800 bg-zinc-900/80 p-6">
+          <div className="rounded-[2rem] border border-[#7d6230]/25 bg-[linear-gradient(180deg,rgba(17,17,17,0.96),rgba(8,8,8,0.94))] p-6">
             <h2 className="text-lg font-semibold">Database</h2>
-            <div className="mt-5 space-y-3 text-sm text-zinc-300">
+            <div className="mt-5 space-y-3 text-sm text-[#e2d0aa]">
               <p>
-                <span className="text-zinc-500">Status:</span>{" "}
+                <span className="text-[#ab9567]">Status:</span>{" "}
                 {dbStatus.connected ? "Connected" : "Connection error"}
               </p>
               {dbStatus.checkedAt ? (
                 <p>
-                  <span className="text-zinc-500">Checked:</span>{" "}
+                  <span className="text-[#ab9567]">Checked:</span>{" "}
                   {new Date(dbStatus.checkedAt).toLocaleString("en-US")}
                 </p>
               ) : null}

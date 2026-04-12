@@ -32,6 +32,10 @@ const providers: Array<
         return null;
       }
 
+      if (!user.emailVerified) {
+        throw new Error("Please verify your email before signing in.");
+      }
+
       const passwordMatches = await compare(
         validatedFields.data.password,
         user.password,

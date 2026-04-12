@@ -1,0 +1,32 @@
+<svg width="1400" height="320" viewBox="0 0 1400 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldMain" x1="46" y1="26" x2="360" y2="267" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8E7B0"/>
+      <stop offset="0.18" stop-color="#F3D47A"/>
+      <stop offset="0.42" stop-color="#C89633"/>
+      <stop offset="0.68" stop-color="#8D6020"/>
+      <stop offset="1" stop-color="#E8C366"/>
+    </linearGradient>
+    <linearGradient id="goldSoft" x1="308" y1="79" x2="308" y2="228" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8E1A1"/>
+      <stop offset="0.5" stop-color="#C79234"/>
+      <stop offset="1" stop-color="#825518"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1400" height="320" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feOffset dy="6"/>
+      <feGaussianBlur stdDeviation="5"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.08 0 0 0 0 0.05 0 0 0 0 0.01 0 0 0 0.42 0"/>
+      <feBlend in2="SourceGraphic" result="shape"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M90 252L197 126L258 164L149 284L90 252Z" fill="url(#goldMain)" stroke="#5A3A12" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M131 123L205 115L315 212L237 220L131 123Z" fill="none" stroke="#7B5720" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M104 251L250 76L307 123L161 299L104 251Z" fill="url(#goldMain)" stroke="#5A3A12" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M252 72L348 22L325 117L252 72Z" fill="url(#goldMain)" stroke="#5A3A12" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M326 95L357 89" stroke="#F6DE98" stroke-width="8" stroke-linecap="round"/>
+    <text x="394" y="228" fill="url(#goldSoft)" stroke="#5A3A12" stroke-width="6" font-size="132" font-weight="700" font-family="Bahnschrift, Avenir Next, Segoe UI, Arial, sans-serif" letter-spacing="-3">
+      AlphaLedger
+    </text>
+  </g>
+</svg>

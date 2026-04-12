@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #090603;
+  --foreground: #f8edd2;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Bahnschrift", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "Cascadia Mono", "IBM Plex Mono", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -22,5 +22,17 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Bahnschrift", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+* {
+  scrollbar-color: rgba(161, 161, 170, 0.45) transparent;
+}
+
+::selection {
+  background: rgba(214, 176, 95, 0.35);
+}
+
+.font-serif {
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
 }

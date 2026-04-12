@@ -21,6 +21,14 @@ export const registerSchema = z.object({
   password: passwordSchema,
 });
 
+export const registerVerificationSchema = z.object({
+  email: z.string().email("Enter a valid email address.").trim(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit verification code."),
+});
+
 export const forgotPasswordSchema = z.object({
   email: z.string().email("Enter a valid email address.").trim(),
 });
@@ -34,6 +42,7 @@ export type AuthActionState = {
     name?: string[];
     email?: string[];
     password?: string[];
+    code?: string[];
   };
   message?: string;
 };

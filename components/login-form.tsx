@@ -15,7 +15,7 @@ function ErrorText({ text }: { text?: string[] }) {
     return null;
   }
 
-  return <p className="text-sm text-red-300">{text[0]}</p>;
+  return <p className="text-sm text-rose-200/90">{text[0]}</p>;
 }
 
 export function LoginForm({ googleEnabled }: LoginFormProps) {
@@ -42,18 +42,18 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
     const result = await signIn("credentials", {
       email: validatedFields.data.email.toLowerCase(),
       password: validatedFields.data.password,
-      callbackUrl: "/dashboard",
+      callbackUrl: "/",
       redirect: false,
     });
 
     if (!result || result.error) {
       setState({
-        message: "Invalid email or password.",
+        message: result?.error ?? "Invalid email or password.",
       });
       return;
     }
 
-    router.push(result.url ?? "/dashboard");
+    router.push(result.url ?? "/");
     router.refresh();
   }
 
@@ -68,7 +68,7 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
         className="space-y-4"
       >
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm text-zinc-300">
+          <label htmlFor="email" className="text-sm text-[#f0ddb0]">
             Email
           </label>
           <input
@@ -76,14 +76,14 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
             name="email"
             type="email"
             required
-            className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none ring-0 placeholder:text-zinc-500"
+            className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
             placeholder="name@example.com"
           />
           <ErrorText text={state.errors?.email} />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm text-zinc-300">
+          <label htmlFor="password" className="text-sm text-[#f0ddb0]">
             Password
           </label>
           <input
@@ -91,14 +91,14 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
             name="password"
             type="password"
             required
-            className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none ring-0 placeholder:text-zinc-500"
+            className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
             placeholder="Your password"
           />
           <ErrorText text={state.errors?.password} />
         </div>
 
         {state.message ? (
-          <p className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <p className="rounded-[1rem] border border-rose-300/18 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
             {state.message}
           </p>
         ) : null}
@@ -106,7 +106,7 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex w-full items-center justify-center rounded-[1rem] bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 py-3.5 text-base font-semibold text-[#140d05] shadow-[0_14px_30px_rgba(169,124,40,0.32)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {pending ? "Signing In..." : "Sign In"}
         </button>
@@ -115,30 +115,29 @@ export function LoginForm({ googleEnabled }: LoginFormProps) {
       {googleEnabled ? (
         <button
           type="button"
-          onClick={() => void signIn("google", { callbackUrl: "/dashboard" })}
-          className="inline-flex w-full items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
+          onClick={() => void signIn("google", { callbackUrl: "/" })}
+          className="inline-flex w-full items-center justify-center rounded-[1rem] border border-[#6f592d]/40 bg-[linear-gradient(180deg,rgba(22,22,22,0.95),rgba(8,8,8,0.96))] px-4 py-3.5 text-sm font-medium text-[#f3deb0] transition hover:border-[#9f7c3a]/55 hover:bg-[linear-gradient(180deg,rgba(28,28,28,0.96),rgba(10,10,10,0.98))]"
         >
           Continue With Google
         </button>
       ) : (
-        <p className="rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <p className="rounded-[1rem] border border-amber-300/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100/90">
           Google login is disabled. Add `AUTH_GOOGLE_ID` and
           `AUTH_GOOGLE_SECRET` to enable it.
         </p>
       )}
 
-      <p className="text-sm text-zinc-400">
-        <Link href="/forgot-password" className="text-zinc-300 hover:text-zinc-100">
+      <div className="flex items-center justify-between gap-4 text-sm text-[#cdb991]/58">
+        <Link href="/forgot-password" className="text-[#d8c79e]/72 transition hover:text-[#fff0c7]">
           Forgot password?
         </Link>
-      </p>
-
-      <p className="text-sm text-zinc-400">
-        No account yet?{" "}
-        <Link href="/register" className="text-emerald-300 hover:text-emerald-200">
-          Create one
-        </Link>
-      </p>
+        <p>
+          No account yet?{" "}
+          <Link href="/register" className="text-[#e0bb6b] underline decoration-[#e0bb6b]/45 underline-offset-4 transition hover:text-[#fff0c7]">
+            Sign Up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
