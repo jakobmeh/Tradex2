@@ -182,7 +182,7 @@ export function RegisterForm() {
                   setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
                 }
                 required
-                className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm tracking-[0.3em] text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
+                className="h-14 w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-0 text-sm leading-none tracking-[0.3em] text-[#f6f2e8] outline-none transition placeholder:leading-none placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
                 placeholder="123456"
               />
               <ErrorText text={state.errors?.code} />
@@ -199,7 +199,7 @@ export function RegisterForm() {
                 name="name"
                 type="text"
                 required
-                className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
+                className="h-14 w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-0 text-sm leading-none text-[#f6f2e8] outline-none transition placeholder:leading-none placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
                 placeholder="Jakob"
               />
               <ErrorText text={state.errors?.name} />
@@ -214,7 +214,7 @@ export function RegisterForm() {
                 name="email"
                 type="email"
                 required
-                className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
+                className="h-14 w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-0 text-sm leading-none text-[#f6f2e8] outline-none transition placeholder:leading-none placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
                 placeholder="name@example.com"
               />
               <ErrorText text={state.errors?.email} />
@@ -229,7 +229,7 @@ export function RegisterForm() {
                 name="password"
                 type="password"
                 required
-                className="w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-3.5 text-sm text-[#f6f2e8] outline-none transition placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
+                className="h-14 w-full rounded-[0.95rem] border border-[#6f592d] bg-[#050505] px-4 py-0 text-sm leading-none text-[#f6f2e8] outline-none transition placeholder:leading-none placeholder:text-[#b59e6d]/40 focus:border-[#d9b15c] focus:bg-[#090909] focus:shadow-[0_0_0_3px_rgba(196,149,58,0.12)]"
                 placeholder="At least 8 characters"
               />
               <ErrorText text={state.errors?.password} />
@@ -266,7 +266,7 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex w-full items-center justify-center rounded-[1rem] bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 py-3.5 text-base font-semibold text-[#140d05] shadow-[0_14px_30px_rgba(169,124,40,0.32)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+          className="inline-flex h-14 w-full items-center justify-center rounded-[1rem] bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 py-0 text-base font-semibold text-[#140d05] shadow-[0_14px_30px_rgba(169,124,40,0.32)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {pending
             ? verificationStep
@@ -313,7 +313,7 @@ export function RegisterForm() {
                 );
               });
             }}
-            className="inline-flex w-full items-center justify-center rounded-[1rem] border border-[#6f592d]/40 bg-[linear-gradient(180deg,rgba(22,22,22,0.95),rgba(8,8,8,0.96))] px-4 py-3.5 text-sm font-medium text-[#f3deb0] transition hover:border-[#9f7c3a]/55 hover:bg-[linear-gradient(180deg,rgba(28,28,28,0.96),rgba(10,10,10,0.98))] disabled:cursor-not-allowed disabled:opacity-70"
+            className="inline-flex h-14 w-full items-center justify-center rounded-[1rem] border border-[#6f592d]/40 bg-[linear-gradient(180deg,rgba(22,22,22,0.95),rgba(8,8,8,0.96))] px-4 py-0 text-sm font-medium text-[#f3deb0] transition hover:border-[#9f7c3a]/55 hover:bg-[linear-gradient(180deg,rgba(28,28,28,0.96),rgba(10,10,10,0.98))] disabled:cursor-not-allowed disabled:opacity-70"
           >
             Resend Code
           </button>

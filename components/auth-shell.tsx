@@ -9,7 +9,7 @@ function BrandMark() {
       width={600}
       height={600}
       priority
-      className="h-[154px] w-[470px] object-contain sm:h-[172px] sm:w-[540px] lg:h-[198px] lg:w-[680px]"
+      className="h-[180px] w-[540px] object-contain sm:h-[198px] sm:w-[600px] lg:h-[230px] lg:w-[760px]"
     />
   );
 }
@@ -32,11 +32,19 @@ export function AuthShell({
   return (
     <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,#050505_0%,#090806_42%,#030303_100%)] px-5 py-8 text-white sm:px-8 lg:px-12">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <Image
+          src="/background.png"
+          alt=""
+          fill
+          priority
+          className="object-cover object-center opacity-[0.1] mix-blend-screen"
+        />
         <div className="absolute inset-x-0 top-0 h-[240px] bg-[linear-gradient(180deg,rgba(0,0,0,0.98)_0%,rgba(0,0,0,0.92)_58%,rgba(0,0,0,0)_100%)]" />
         <div className="absolute inset-x-0 top-0 h-[340px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_58%)]" />
-        <div className="absolute -left-[25rem] top-[2rem] h-[56rem] w-[56rem] rounded-full border border-white/6 bg-[radial-gradient(circle_at_35%_38%,rgba(214,163,73,0.16),rgba(95,67,24,0.12)_23%,rgba(18,14,9,0.48)_48%,transparent_72%)] shadow-[0_0_140px_rgba(115,82,24,0.18)]" />
-        <div className="absolute -left-[16rem] top-[10rem] h-[38rem] w-[38rem] rounded-full border border-white/5 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.05),rgba(179,132,49,0.08)_18%,rgba(10,10,10,0.02)_58%,transparent_76%)]" />
-        <div className="absolute left-[5rem] top-[24rem] h-[18rem] w-[18rem] rounded-full bg-[radial-gradient(circle,rgba(198,147,58,0.14)_0%,rgba(88,61,18,0.06)_36%,transparent_68%)] blur-3xl" />
+        <div className="absolute -left-[20rem] top-[4rem] h-[40rem] w-[40rem] rounded-full border border-white/5 bg-[radial-gradient(circle_at_38%_40%,rgba(214,163,73,0.11),rgba(95,67,24,0.08)_24%,rgba(12,12,12,0.44)_52%,transparent_74%)] shadow-[0_0_90px_rgba(115,82,24,0.12)] sm:-left-[23rem] sm:h-[48rem] sm:w-[48rem] lg:-left-[18rem] lg:h-[50rem] lg:w-[50rem]" />
+        <div className="absolute -left-[11rem] top-[12rem] h-[24rem] w-[24rem] rounded-full border border-white/4 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.035),rgba(179,132,49,0.05)_18%,rgba(10,10,10,0.02)_58%,transparent_76%)] sm:-left-[13rem] sm:h-[28rem] sm:w-[28rem] lg:-left-[8rem] lg:h-[30rem] lg:w-[30rem]" />
+        <div className="absolute left-[1rem] top-[26rem] h-[10rem] w-[10rem] rounded-full bg-[radial-gradient(circle,rgba(198,147,58,0.08)_0%,rgba(88,61,18,0.03)_38%,transparent_68%)] blur-3xl sm:left-[2rem] sm:h-[12rem] sm:w-[12rem] lg:left-[4rem] lg:h-[14rem] lg:w-[14rem]" />
+        <div className="absolute inset-y-0 left-0 w-[38%] bg-[linear-gradient(90deg,rgba(0,0,0,0.34),rgba(0,0,0,0.08)_52%,transparent)]" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.9))]" />
       </div>
 
@@ -51,7 +59,7 @@ export function AuthShell({
               <p className="text-xs uppercase tracking-[0.34em] text-[#d9bd79]/68">
                 Neural Trading Layer
               </p>
-              <h1 className="mt-7 max-w-[12ch] text-5xl font-medium leading-[0.98] tracking-[-0.04em] text-[#fff5db] lg:text-[4.1rem]">
+              <h1 className="mt-7 max-w-[12ch] text-5xl font-semibold leading-[0.94] tracking-[-0.055em] text-[#fff5db] lg:text-[4.1rem]">
                 {title}
               </h1>
               <p className="mt-7 max-w-md text-lg leading-8 text-[#d8c59b]/58">
@@ -76,7 +84,7 @@ export function AuthShell({
               <p className="text-xs uppercase tracking-[0.34em] text-[#d3b56f]/62">
                 AlphaLedger Access
               </p>
-              <h2 className="mt-4 text-3xl font-medium tracking-[-0.03em] text-[#fff2d0]">
+              <h2 className="mt-4 text-3xl font-semibold tracking-[-0.045em] text-[#fff2d0]">
                 {formTitle}
               </h2>
               <p className="mt-3 max-w-lg text-sm leading-7 text-[#d5c6a3]/54">
