@@ -8,8 +8,15 @@ export async function PATCH(req: Request) {
 
   const { blocks } = await req.json() as { blocks: { id: string; order: number }[] }
 
-  await Promise.all(
-    blocks.map(b => prisma.block.update({ where: { id: b.id }, data: { order: b.order } }))
+  if (!Array.isArray(blocks) || blocks.length === 0) {
+    return NextResponse.json({ success: true })
+  }
+
+  await prisma.$transaction(
+    blocks.map(({ id, order }) =>
+      prisma.block.update({ where: { id }, data: { order } })
+    )
   )
+
   return NextResponse.json({ success: true })
 }

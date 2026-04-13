@@ -27,15 +27,36 @@ export default async function DashboardPage(
       id: true,
       title: true,
       icon: true,
+      blocks: {
+        where: {
+          isDeleted: false,
+          parentId: null,
+        },
+        orderBy: {
+          order: 'asc',
+        },
+        select: {
+          id: true,
+          type: true,
+          content: true,
+          order: true,
+          pageId: true,
+          parentId: true,
+        },
+      },
     },
   })
 
   if (!page) notFound()
 
   return (
-    <div className="mx-auto max-w-4xl px-8 py-16">
-      <PageHeader page={page} />
-      <BlockEditor pageId={page.id} />
+    <div className="px-4 sm:px-8 py-10 sm:py-16">
+      <div className="mx-auto max-w-4xl">
+        <PageHeader page={page} />
+      </div>
+      <div className="mx-auto mt-2 max-w-[1400px]">
+        <BlockEditor pageId={page.id} pageTitle={page.title ?? 'Untitled'} initialBlocks={page.blocks as import('@/lib/blocks').Block[]} />
+      </div>
     </div>
   )
 }

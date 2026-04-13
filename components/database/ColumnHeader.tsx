@@ -1,9 +1,13 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { PROPERTY_TYPES, PropertyType, SelectOption, SELECT_COLORS } from '@/lib/database'
+
+import { useEffect, useRef, useState } from 'react'
+import { PROPERTY_TYPES, PropertyType, SELECT_COLORS, SelectOption } from '@/lib/database'
 
 type Property = {
-  id: string; name: string; type: string; config: string
+  id: string
+  name: string
+  type: string
+  config: string
 }
 
 type Props = {
@@ -11,14 +15,27 @@ type Props = {
   databaseId: string
   onUpdate: (id: string, data: Partial<Property>) => void
   onDelete: (id: string) => void
+  compact?: boolean
 }
 
-export default function ColumnHeader({ property, databaseId, onUpdate, onDelete }: Props) {
+export default function ColumnHeader({
+  property,
+  databaseId,
+  onUpdate,
+  onDelete,
+  compact = false,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(property.name)
   const [tab, setTab] = useState<'main' | 'options'>('main')
   const ref = useRef<HTMLDivElement>(null)
-  const config = (() => { try { return JSON.parse(property.config) } catch { return {} } })()
+  const config = (() => {
+    try {
+      return JSON.parse(property.config)
+    } catch {
+      return {}
+    }
+  })()
   const options: SelectOption[] = config.options ?? []
 
   useEffect(() => {
@@ -63,45 +80,59 @@ export default function ColumnHeader({ property, databaseId, onUpdate, onDelete 
     })
   }
 
-  const typeInfo = PROPERTY_TYPES.find(t => t.type === property.type)
+  const typeInfo = PROPERTY_TYPES.find((t) => t.type === property.type)
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(p => !p)}
-        className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white w-full px-2 py-1.5 truncate">
-        <span className="text-zinc-500">{typeInfo?.icon}</span>
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className={`flex w-full items-center gap-1 truncate text-zinc-400 hover:text-white ${
+          compact ? 'px-1 py-1 text-[11px]' : 'px-2 py-1.5 text-xs'
+        }`}
+      >
+        <span className="shrink-0 text-zinc-500">{typeInfo?.icon}</span>
         <span className="truncate">{property.name}</span>
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl w-56 overflow-hidden">
-          {/* rename */}
-          <div className="p-2 border-b border-zinc-800">
-            <input value={name} onChange={e => setName(e.target.value)}
+        <div className="absolute top-full left-0 z-50 w-56 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 shadow-xl">
+          <div className="border-b border-zinc-800 p-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               onBlur={saveName}
-              onKeyDown={e => e.key === 'Enter' && saveName()}
-              className="w-full bg-zinc-800 text-white text-sm px-2 py-1 rounded outline-none" />
+              onKeyDown={(e) => e.key === 'Enter' && saveName()}
+              className="w-full rounded bg-zinc-800 px-2 py-1 text-sm text-white outline-none"
+            />
           </div>
 
-          {/* tabs */}
           <div className="flex border-b border-zinc-800">
-            {['main', 'options'].map(t => (
-              <button key={t} onClick={() => setTab(t as 'main' | 'options')}
-                className={`flex-1 text-xs py-1.5 capitalize ${tab === t ? 'text-white border-b border-white' : 'text-zinc-500'}`}>
+            {['main', 'options'].map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t as 'main' | 'options')}
+                className={`flex-1 py-1.5 text-xs capitalize ${
+                  tab === t ? 'border-b border-white text-white' : 'text-zinc-500'
+                }`}
+              >
                 {t === 'main' ? 'Type' : 'Options'}
               </button>
             ))}
           </div>
 
           {tab === 'main' && (
-            <div className="p-1 max-h-48 overflow-y-auto">
-              {PROPERTY_TYPES.map(pt => (
-                <button key={pt.type} onClick={() => changeType(pt.type)}
-                  className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-zinc-800
-                    ${property.type === pt.type ? 'text-white' : 'text-zinc-400'}`}>
+            <div className="max-h-48 overflow-y-auto p-1">
+              {PROPERTY_TYPES.map((pt) => (
+                <button
+                  key={pt.type}
+                  onClick={() => changeType(pt.type)}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-zinc-800 ${
+                    property.type === pt.type ? 'text-white' : 'text-zinc-400'
+                  }`}
+                >
                   <span className="w-5 text-center text-xs">{pt.icon}</span>
                   {pt.label}
-                  {property.type === pt.type && <span className="ml-auto text-blue-400 text-xs">✓</span>}
+                  {property.type === pt.type && <span className="ml-auto text-xs text-blue-400">OK</span>}
                 </button>
               ))}
             </div>
@@ -111,26 +142,34 @@ export default function ColumnHeader({ property, databaseId, onUpdate, onDelete 
             <div className="p-2">
               {['select', 'multi_select'].includes(property.type) ? (
                 <>
-                  <div className="flex flex-col gap-1 mb-2">
-                    {options.map(opt => {
-                      const c = SELECT_COLORS.find(x => x.name === opt.color) ?? SELECT_COLORS[0]
+                  <div className="mb-2 flex flex-col gap-1">
+                    {options.map((opt) => {
+                      const c = SELECT_COLORS.find((x) => x.name === opt.color) ?? SELECT_COLORS[0]
                       return (
                         <div key={opt.id} className="flex items-center gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{opt.label}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-xs ${c.bg} ${c.text}`}>{opt.label}</span>
                         </div>
                       )
                     })}
                   </div>
-                  <button onClick={addOption}
-                    className="text-xs text-blue-400 hover:text-blue-300">+ Add option</button>
+                  <button onClick={addOption} className="text-xs text-blue-400 hover:text-blue-300">
+                    + Add option
+                  </button>
                 </>
               ) : (
                 <p className="text-xs text-zinc-600">No options for this type.</p>
               )}
-              <hr className="border-zinc-800 my-2" />
+              <hr className="my-2 border-zinc-800" />
               {property.type !== 'title' && (
-                <button onClick={() => { onDelete(property.id); setOpen(false) }}
-                  className="text-xs text-red-400 hover:text-red-300">Delete property</button>
+                <button
+                  onClick={() => {
+                    onDelete(property.id)
+                    setOpen(false)
+                  }}
+                  className="text-xs text-red-400 hover:text-red-300"
+                >
+                  Delete property
+                </button>
               )}
             </div>
           )}

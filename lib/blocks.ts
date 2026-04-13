@@ -13,6 +13,8 @@ export type BlockType =
   | 'image'
   | 'database_table'
   | 'ai_table'
+  | 'database_stat'
+  | 'database_chart'
 
 export type BlockContent = {
   text?: string
@@ -22,6 +24,16 @@ export type BlockContent = {
   caption?: string
   emoji?: string
   databaseId?: string
+  // stat block
+  statLabel?: string
+  statFormula?: string
+  statColumn?: string
+  statFilterValue?: string
+  // chart block
+  chartType?: string
+  chartTitle?: string
+  chartGroupBy?: string
+  chartMetric?: string
 }
 
 export type Block = {
@@ -52,7 +64,6 @@ export const BLOCK_MENU: {
   { type: 'callout', label: 'Callout', icon: '!', description: 'Callout box with emoji' },
   { type: 'code', label: 'Code', icon: '<>', description: 'Code block' },
   { type: 'database_table', label: 'Table', icon: 'Tbl', description: 'Create an editable database table' },
-  { type: 'ai_table', label: 'AI Table', icon: 'AI', description: 'Describe a table and let AI build it' },
   { type: 'divider', label: 'Divider', icon: '---', description: 'Horizontal line' },
   { type: 'image', label: 'Image', icon: 'Img', description: 'Upload or embed image' },
 ]
