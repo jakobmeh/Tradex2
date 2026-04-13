@@ -59,7 +59,15 @@ export default async function Home() {
 
             {session?.user ? (
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <p className="text-sm text-[#d9c59d]">You are signed in.</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <p className="text-sm text-[#d9c59d]">You are signed in.</p>
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center justify-center rounded-2xl bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 py-3 text-sm font-semibold text-[#140d05] transition hover:brightness-110"
+                  >
+                    Open Dashboard
+                  </Link>
+                </div>
                 <SignOutButton />
               </div>
             ) : (

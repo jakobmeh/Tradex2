@@ -24,6 +24,7 @@ model User {
   accounts            Account[]
   passwordResetTokens PasswordResetToken[]
   sessions            Session[]
+  workspaceMemberships WorkspaceMember[]
 }
 
 model Account {
@@ -69,4 +70,134 @@ model PasswordResetToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Workspace {
+  id        String            @id @default(cuid())
+  name      String
+  icon      String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  members   WorkspaceMember[]
+  pages     Page[]
+  databases Database[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String    @default("member")
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+model Page {
+  id          String   @id @default(cuid())
+  workspaceId String
+  parentId    String?
+  title       String   @default("Untitled")
+  icon        String?
+  order       Int      @default(0)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent      Page?     @relation("PageChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Page[]    @relation("PageChildren")
+  blocks      Block[]
+
+  @@index([workspaceId, parentId, order])
+  @@index([workspaceId, isDeleted])
+  @@index([parentId])
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  pageId    String
+  parentId  String?
+  type      String
+  content   String?  @db.Text
+  order     Int      @default(0)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  parent    Block?   @relation("BlockChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Block[]  @relation("BlockChildren")
+
+  @@index([pageId, order])
+  @@index([pageId, isDeleted, order])
+  @@index([parentId])
+}
+
+model Database {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  icon        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  properties  DatabaseProperty[]
+  entries     DatabaseEntry[]
+  views       DatabaseView[]
+
+  @@index([workspaceId, createdAt])
+}
+
+model DatabaseProperty {
+  id         String          @id @default(cuid())
+  databaseId String
+  name       String
+  type       String
+  config     String          @default("{}") @db.Text
+  order      Int             @default(0)
+  database   Database        @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  values     PropertyValue[]
+
+  @@index([databaseId, order])
+}
+
+model DatabaseEntry {
+  id         String          @id @default(cuid())
+  databaseId String
+  order      Int             @default(0)
+  isDeleted  Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  database   Database        @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+  values     PropertyValue[]
+
+  @@index([databaseId, isDeleted, order])
+}
+
+model PropertyValue {
+  id         String           @id @default(cuid())
+  entryId     String
+  propertyId  String
+  value       String          @default("") @db.Text
+  entry       DatabaseEntry   @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  property    DatabaseProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, propertyId])
+  @@index([propertyId])
+}
+
+model DatabaseView {
+  id         String    @id @default(cuid())
+  databaseId String
+  name       String
+  type       String
+  config     String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  database   Database  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@index([databaseId])
 }
