@@ -15,7 +15,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       databaseId: id,
       order: count,
       values: {
-        create: properties.map(p => ({
+        create: properties.map((p: typeof properties[number]) => ({
           propertyId: p.id,
           value: p.type === 'checkbox' ? 'false' : '',
         })),
