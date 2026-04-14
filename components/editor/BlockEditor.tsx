@@ -32,6 +32,7 @@ type ChatBlockRef = {
   id: string
   type: BlockType
   databaseId?: string
+  text?: string
 }
 
 // Stable key for React reconciliation — survives temp→real ID swap
@@ -418,10 +419,12 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
         databaseId = undefined
       }
     }
+    const text = getBlockText(b).trim()
     return {
       id: b.id,
       type: b.type,
       databaseId,
+      text: text || undefined,
     }
   })
 

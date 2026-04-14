@@ -32,13 +32,14 @@ type ChatAction =
   | {
       type: 'remove_blocks'
       blockIds?: string[]
-      blockType?: 'database_table' | 'database_chart' | 'database_stat' | 'any'
+      ids?: string[]
+      blockType?: BlockType | 'any'
       databaseId?: string
       scope?: 'all' | 'first'
     }
 
 type DatabaseRef = { id: string; name: string; columns: string[] }
-type BlockRef = { id: string; type: BlockType; databaseId?: string }
+type BlockRef = { id: string; type: BlockType; databaseId?: string; text?: string }
 
 type Props = {
   pageId: string
@@ -73,6 +74,8 @@ export default function PageChatbot({
   const [databases, setDatabases] = useState<DatabaseRef[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   // Re-fetch database info whenever the set of databases on the page changes.
   // This runs on open AND whenever databaseIds changes mid-session (e.g. after creating a table).
@@ -101,6 +104,24 @@ export default function PageChatbot({
       setTimeout(() => inputRef.current?.focus(), 60)
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
+  }, [open])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null
+      if (
+        open &&
+        panelRef.current &&
+        !panelRef.current.contains(target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(target)
+      ) {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
   useEffect(() => {
@@ -188,6 +209,28 @@ export default function PageChatbot({
             chartMetric: action.chartMetric ?? 'count',
           })
           log.push(`Added chart: ${action.chartTitle}`)
+        } else if (action.type === 'remove_blocks') {
+          let ids = action.ids ?? action.blockIds ?? []
+
+          if (ids.length === 0) {
+            if (action.scope === 'all') {
+              ids = blockRefs.map((block) => block.id)
+            } else if (action.blockType) {
+              const matching = blockRefs.filter((block) => action.blockType === 'any' || block.type === action.blockType)
+              ids = matching.slice(0, 1).map((block) => block.id)
+            }
+          }
+
+          if (ids.length > 0) {
+            await onDeleteBlocks(ids)
+            if (action.scope === 'all') {
+              log.push(ids.length === blockRefs.length ? 'Removed all blocks' : `Removed ${ids.length} block${ids.length === 1 ? '' : 's'}`)
+            } else {
+              log.push(ids.length === 1 ? 'Removed 1 block' : `Removed ${ids.length} blocks`)
+            }
+          } else {
+            log.push('⚠ Remove skipped: no matching blocks')
+          }
         }
       } catch {
         log.push(`⚠ Action failed: ${action.type}`)
@@ -216,6 +259,7 @@ export default function PageChatbot({
           pageContext: {
             title: pageTitle,
             databases,
+            blocks: blockRefs,
           },
         }),
       })
@@ -256,9 +300,10 @@ export default function PageChatbot({
     <>
       {/* Floating toggle button */}
       <button
+        ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={[
-          'fixed bottom-6 right-6 z-50',
+          'fixed bottom-6 right-4 sm:right-6 z-50',
           'flex h-12 w-12 items-center justify-center rounded-full shadow-lg',
           'transition-all duration-200',
           open
@@ -285,7 +330,7 @@ export default function PageChatbot({
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 flex flex-col w-80 sm:w-96 h-[520px] sm:h-[560px] m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
+        <div ref={panelRef} className="fixed inset-x-0 sm:right-0 sm:left-auto bottom-0 z-50 flex flex-col w-full max-w-[calc(100%-1rem)] sm:w-96 h-[min(68vh,560px)] max-h-[calc(100vh-3.5rem)] mx-auto m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
@@ -316,6 +361,8 @@ export default function PageChatbot({
                     'Create a trading journal table',
                     'Add a live win rate stat',
                     'Add a chart showing wins vs losses',
+                    'Remove everything from this page',
+                    'Clear this page and start fresh',
                   ].map((s) => (
                     <button
                       key={s}

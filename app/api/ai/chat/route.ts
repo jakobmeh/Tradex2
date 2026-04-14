@@ -3,8 +3,9 @@ import { auth } from '@/auth'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 type ChatDatabase = { id: string; name: string; columns: string[] }
+type ChatBlock = { id: string; type: string; text?: string }
 
-function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[]): string {
+function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[], blocks: ChatBlock[]): string {
   const dbContext =
     databases.length > 0
       ? databases
@@ -12,11 +13,21 @@ function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[]): string
           .join('\n')
       : '  (no databases on this page yet)'
 
+  const blockContext =
+    blocks.length > 0
+      ? blocks
+          .map((b) => `  - id: ${b.id}, type: ${b.type}, text: "${String(b.text ?? '').replace(/"/g, '\\"')}"`)
+          .join('\n')
+      : '  (no blocks on this page yet)'
+
   return `You are an AI assistant inside a productivity app called Tradex. Help users build their page by creating content, tables, and data visualizations through chat.
 
 Current page: "${pageTitle}"
 Databases on this page:
 ${dbContext}
+
+Blocks on this page:
+${blockContext}
 
 Always respond with valid JSON in EXACTLY this structure:
 {
@@ -61,6 +72,15 @@ Rules: always start with exactly one "title" column. For select columns include 
   "chartMetric": "winrate|count"
 }
 
+5. remove_blocks — remove blocks from the page
+{
+  "type": "remove_blocks",
+  "ids": ["<block id>"],
+  "blockType": "database_table|database_chart|database_stat|text|heading1|heading2|heading3|callout|quote|any",
+  "scope": "all|first"
+}
+Rules: if "ids" is provided, delete those exact blocks. If "scope" is "all" and "ids" is empty, delete all blocks on the page. If "blockType" is provided without ids, delete only the first matching block unless the user explicitly asks to remove all blocks of that type. Use the block list above to choose the correct id for a named block. If the user asks to remove a paragraph or block by exact text, match that text to a block's text and return its id. If you cannot confidently identify the right block, do not perform the delete action; instead respond with a clarification request.
+
 For trading journals: suggest columns like Direction (select: Long/Short), Entry, SL, TP, Result (select: Win/Loss/Breakeven), Setup, Date, Notes.
 For winrate stats: statColumn = result column name, statFilterValue = "Win".
 If creating a table and stat in the same response, use databaseId "__created__" for the stat/chart.
@@ -81,11 +101,11 @@ export async function POST(req: Request) {
 
   const body = (await req.json()) as {
     messages: ChatMessage[]
-    pageContext: { title: string; databases: ChatDatabase[] }
+    pageContext: { title: string; databases: ChatDatabase[]; blocks?: ChatBlock[] }
   }
 
   const { messages, pageContext } = body
-  const systemPrompt = buildSystemPrompt(pageContext?.title ?? 'Untitled', pageContext?.databases ?? [])
+  const systemPrompt = buildSystemPrompt(pageContext?.title ?? 'Untitled', pageContext?.databases ?? [], pageContext?.blocks ?? [])
 
   const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
