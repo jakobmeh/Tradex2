@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
-import type { DatabaseProperty } from '@prisma/client'
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -16,7 +15,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       databaseId: id,
       order: count,
       values: {
-        create: properties.map((p: DatabaseProperty) => ({
+        create: properties.map((p: { id: string; type: string }) => ({
           propertyId: p.id,
           value: p.type === 'checkbox' ? 'false' : '',
         })),
