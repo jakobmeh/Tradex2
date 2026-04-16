@@ -5,7 +5,7 @@ import { useDatabaseRefresh } from '@/lib/database-refresh-context'
 
 type Entry = {
   id: string
-  values: Array<{ propertyId: string; value: string; property: { name: string; type: string } }>
+  values: Array<{ propertyId: string; value: string; property: { name: string; type: string; config: string } }>
 }
 
 type Props = {

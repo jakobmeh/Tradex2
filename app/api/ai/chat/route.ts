@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
-type ChatDatabase = { id: string; name: string; columns: string[] }
+type ChatDatabase = { id: string; name: string; columns: string[]; stats?: string }
+type ChatBlock = { id: string; type: string; databaseId?: string; text?: string }
 
 function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[], blocks: ChatBlock[]): string {
   const dbContext =
@@ -14,6 +15,11 @@ function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[], blocks:
           })
           .join('\n')
       : '  (no databases on this page yet)'
+
+  const blockContext =
+    blocks.length > 0
+      ? blocks.map((b) => `  - [${b.type}] id: ${b.id}${b.databaseId ? ` db: ${b.databaseId}` : ''}${b.text ? ` "${b.text}"` : ''}`).join('\n')
+      : '  (no blocks)'
 
   return `You are an AI assistant inside a productivity app called Tradex. Help users build their page by creating content, tables, and data visualizations through chat.
 
