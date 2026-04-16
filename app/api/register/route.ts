@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { randomInt, randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sendSignupVerificationEmail } from "@/lib/mail";
 import { registerSchema } from "@/lib/validation";
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   const code = createVerificationCode();
   const identifier = getSignupIdentifier(email);
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     if (existingUser) {
       await tx.user.update({
         where: { id: existingUser.id },

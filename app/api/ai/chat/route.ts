@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
-type ChatDatabase = { id: string; name: string; columns: string[]; stats?: string }
+type ChatDatabase = { id: string; name: string; columns: string[] }
 
-function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[]): string {
+function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[], blocks: ChatBlock[]): string {
   const dbContext =
     databases.length > 0
       ? databases
@@ -15,11 +15,14 @@ function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[]): string
           .join('\n')
       : '  (no databases on this page yet)'
 
-  return `You are an AI assistant inside a productivity app called Tradex. Help users build pages with tables, stats, and charts through casual chat.
+  return `You are an AI assistant inside a productivity app called Tradex. Help users build their page by creating content, tables, and data visualizations through chat.
 
 Current page: "${pageTitle}"
 Databases on this page:
 ${dbContext}
+
+Blocks on this page:
+${blockContext}
 
 Always respond with valid JSON in EXACTLY this structure:
 { "message": "<your friendly reply>", "actions": [] }
@@ -79,42 +82,13 @@ AVAILABLE ACTIONS
   "chartGroupBy": "<exact column name from context to group by, or empty string>",
   "chartMetric": "winrate|count"
 }
-- For winrate charts: set chartGroupBy to the result/outcome column name, chartMetric to "winrate"
-- Use the EXACT column name as listed in the database context above
 
-5. compute_stat — answer a question using live data (no block added)
-{
-  "type": "compute_stat",
-  "databaseId": "<id from context>",
-  "statFormula": "winrate|count|sum|average",
-  "statColumn": "<exact column name>",
-  "statFilterValue": "<win label, e.g. Win>"
-}
-- Use when user asks: "what's my win rate?", "how many trades?", "am I profitable?"
-- Put {{STAT}} in your message where the value goes. Example: "Your win rate is {{STAT}}."
-
-6. remove_blocks
-{
-  "type": "remove_blocks",
-  "blockType": "text|heading1|heading2|heading3|callout|quote|database_table|database_chart|database_stat|any",
-  "scope": "all|first"
-}
-
----
-TRADING JOURNAL DEFAULTS
-- Columns: Name (title), Date (date), Direction (select: Long/Short), Entry (number), SL (number), TP (number), Result (select: Win/Loss/Breakeven), Setup (text), Notes (text)
-- Win rate stat: statColumn = "Result", statFilterValue = "Win"
-- Win/Loss distribution chart: chartGroupBy = "Result", chartMetric = "count" → shows bars for Win, Loss, Breakeven counts
-- Overall win rate chart: chartGroupBy = "" (empty), chartMetric = "winrate" → shows a single win rate % bar
-- Use "count" metric for grouped charts (groupBy set). Use "winrate" metric only for overall (no groupBy).
-
----
-RULES
-- Full setup (journal + stats + charts) → always create_table first, then add stats/charts using databaseId "__created__"
-- Adding stat/chart to existing table → use the real databaseId from context, do NOT create new table
-- Only one database on page and user says "make a chart" → use that database directly
-- Column names in actions must EXACTLY match the column names shown in the database context above
-- Be short and friendly in your message`
+For trading journals: suggest columns like Direction (select: Long/Short), Entry, SL, TP, Result (select: Win/Loss/Breakeven), Setup, Date, Notes.
+For winrate stats: statColumn = result column name, statFilterValue = "Win".
+If creating a table and stat in the same response, use databaseId "__created__" for the stat/chart.
+If the user asks to add a chart/stat for an existing table ("this table", "that table", "already exists"), do NOT create a new table.
+Prefer using an existing databaseId from context, and only create_table when the user clearly asks for a brand-new table.
+Be concise and helpful.`
 }
 
 export async function POST(req: Request) {
@@ -129,11 +103,11 @@ export async function POST(req: Request) {
 
   const body = (await req.json()) as {
     messages: ChatMessage[]
-    pageContext: { title: string; databases: ChatDatabase[] }
+    pageContext: { title: string; databases: ChatDatabase[]; blocks?: ChatBlock[] }
   }
 
   const { messages, pageContext } = body
-  const systemPrompt = buildSystemPrompt(pageContext?.title ?? 'Untitled', pageContext?.databases ?? [])
+  const systemPrompt = buildSystemPrompt(pageContext?.title ?? 'Untitled', pageContext?.databases ?? [], pageContext?.blocks ?? [])
 
   const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

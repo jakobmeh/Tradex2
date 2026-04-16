@@ -32,7 +32,7 @@ type ChatAction =
   | {
       type: 'remove_blocks'
       blockIds?: string[]
-      blockType?: string
+      blockType?: 'database_table' | 'database_chart' | 'database_stat' | 'any'
       databaseId?: string
       scope?: 'all' | 'first'
     }
@@ -44,7 +44,7 @@ type ChatAction =
       statFilterValue?: string
     }
 
-type DatabaseRef = { id: string; name: string; columns: string[]; stats?: string }
+type DatabaseRef = { id: string; name: string; columns: string[] }
 type BlockRef = { id: string; type: BlockType; databaseId?: string }
 
 type Props = {
@@ -80,8 +80,6 @@ export default function PageChatbot({
   const [databases, setDatabases] = useState<DatabaseRef[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const panelRef = useRef<HTMLDivElement>(null)
-  const toggleRef = useRef<HTMLButtonElement>(null)
 
   // Re-fetch database info whenever the set of databases on the page changes.
   // This runs on open AND whenever databaseIds changes mid-session (e.g. after creating a table).
@@ -163,20 +161,6 @@ export default function PageChatbot({
       setTimeout(() => inputRef.current?.focus(), 60)
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (
-        panelRef.current?.contains(target) ||
-        toggleRef.current?.contains(target)
-      ) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
   useEffect(() => {
@@ -284,68 +268,6 @@ export default function PageChatbot({
             chartMetric: action.chartMetric ?? 'count',
           })
           log.push(`Added chart: ${action.chartTitle}`)
-        } else if (action.type === 'compute_stat') {
-          const dbId = resolveDbId(action.databaseId, lastCreatedDbId)
-          if (!dbId) { log.push('⚠ compute_stat: no database found'); continue }
-          const res = await fetch(`/api/databases/${dbId}`)
-          if (!res.ok) { log.push('⚠ compute_stat: failed to load data'); continue }
-          const data = await res.json() as {
-            entries: Array<{ values: Array<{ value: string; property: { name: string; type: string; config: string } }> }>
-          }
-          const entries = data.entries ?? []
-          const formula = action.statFormula ?? 'winrate'
-          const col = (action.statColumn ?? '').toLowerCase()
-          const winVal = (action.statFilterValue ?? 'Win').toLowerCase()
-
-          const resolveEntryVal = (raw: string, prop: { type: string; config: string }): string => {
-            if (!raw?.trim()) return ''
-            if (prop.type === 'select' || prop.type === 'multi_select') {
-              try {
-                const cfg = JSON.parse(prop.config ?? '{}') as { options?: Array<{ id: string; label: string }> }
-                return cfg.options?.find(o => o.id === raw)?.label ?? raw
-              } catch { return raw }
-            }
-            return raw
-          }
-
-          let result = '—'
-          if (formula === 'count') {
-            result = String(entries.length)
-          } else if (formula === 'winrate') {
-            const vals = entries.map(e => {
-              const v = e.values.find(v => v.property.name.toLowerCase() === col)
-              if (!v) return ''
-              return resolveEntryVal(v.value, v.property)
-            })
-            const filled = vals.filter(v => v.trim() !== '')
-            if (filled.length > 0) {
-              const wins = filled.filter(v => v.toLowerCase() === winVal).length
-              result = `${Math.round((wins / filled.length) * 100)}% (${wins}/${filled.length})`
-            }
-          } else if (formula === 'sum' || formula === 'average') {
-            const nums = entries
-              .map(e => e.values.find(v => v.property.name.toLowerCase() === col)?.value ?? '')
-              .map(Number).filter(n => !isNaN(n) && n !== 0)
-            if (nums.length > 0) {
-              const sum = nums.reduce((a, b) => a + b, 0)
-              result = formula === 'sum' ? String(sum) : String(Math.round((sum / nums.length) * 100) / 100)
-            }
-          }
-          messageOverrides['{{STAT}}'] = result
-          log.push(`Computed ${formula}: ${result}`)
-        } else if (action.type === 'remove_blocks') {
-          const targetType = action.blockType ?? 'any'
-          const scope = action.scope ?? 'all'
-          const matching = blockRefs.filter((b) =>
-            targetType === 'any' ? true : b.type === targetType
-          )
-          const toRemove = scope === 'first' ? matching.slice(0, 1) : matching
-          if (toRemove.length === 0) {
-            log.push('⚠ No matching blocks found to remove')
-          } else {
-            await onDeleteBlocks(toRemove.map((b) => b.id))
-            log.push(`Removed ${toRemove.length} block${toRemove.length > 1 ? 's' : ''}`)
-          }
         }
       } catch {
         log.push(`⚠ Action failed: ${action.type}`)
@@ -422,7 +344,7 @@ export default function PageChatbot({
           messages: newMessages,
           pageContext: {
             title: pageTitle,
-            databases: freshDatabases,
+            databases,
           },
         }),
       })
@@ -470,10 +392,9 @@ export default function PageChatbot({
     <>
       {/* Floating toggle button */}
       <button
-        ref={toggleRef}
         onClick={() => setOpen((v) => !v)}
         className={[
-          'fixed bottom-6 right-6 z-50',
+          'fixed bottom-6 right-4 sm:right-6 z-50',
           'flex h-12 w-12 items-center justify-center rounded-full shadow-lg',
           'transition-all duration-200',
           open
@@ -500,7 +421,7 @@ export default function PageChatbot({
 
       {/* Chat panel */}
       {open && (
-        <div ref={panelRef} className="fixed bottom-0 right-0 z-50 flex flex-col w-80 sm:w-96 h-[520px] sm:h-[560px] m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
+        <div className="fixed bottom-0 right-0 z-50 flex flex-col w-80 sm:w-96 h-[520px] sm:h-[560px] m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">
@@ -531,6 +452,8 @@ export default function PageChatbot({
                     'Create a trading journal table',
                     'Add a live win rate stat',
                     'Add a chart showing wins vs losses',
+                    'Remove everything from this page',
+                    'Clear this page and start fresh',
                   ].map((s) => (
                     <button
                       key={s}
