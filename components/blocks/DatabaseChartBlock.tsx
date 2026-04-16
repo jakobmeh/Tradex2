@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useDatabaseRefresh } from '@/lib/database-refresh-context'
 
 type Entry = {
   id: string
-  values: Array<{ propertyId: string; value: string; property: { name: string; type: string } }>
+  values: Array<{ propertyId: string; value: string; property: { name: string; type: string; config: string } }>
 }
+
+type Property = { name: string; type: string; config: string }
 
 type Props = {
   databaseId: string
@@ -17,49 +20,86 @@ type Props = {
 
 type DataPoint = { label: string; value: number; count: number }
 
-function getColValue(entry: Entry, colName: string): string {
-  if (!colName) return ''
-  return entry.values.find((v) => v.property.name.toLowerCase() === colName.toLowerCase())?.value ?? ''
+function resolveValue(raw: string, prop: { type: string; config: string }): string {
+  if (!raw?.trim()) return ''
+  if (prop.type === 'select' || prop.type === 'multi_select') {
+    try {
+      const cfg = JSON.parse(prop.config ?? '{}') as { options?: Array<{ id: string; label: string }> }
+      const opt = cfg.options?.find((o) => o.id === raw)
+      return opt?.label ?? raw
+    } catch { return raw }
+  }
+  return raw
 }
 
-function buildData(entries: Entry[], groupBy: string, metric: string): DataPoint[] {
+function getColValue(entry: Entry, colName: string): string {
+  if (!colName) return ''
+  const v = entry.values.find((v) => v.property.name.toLowerCase() === colName.toLowerCase())
+  if (!v) return ''
+  return resolveValue(v.value, v.property)
+}
+
+function buildData(entries: Entry[], groupBy: string, metric: string, properties: Property[]): DataPoint[] {
   if (entries.length === 0) return []
 
   // Overall (no grouping)
   if (!groupBy) {
     if (metric === 'count') return [{ label: 'Total', value: entries.length, count: entries.length }]
     if (metric === 'winrate') {
-      const wins = entries.filter((e) => {
-        const vals = e.values.map((v) => v.value.toLowerCase())
-        return vals.includes('win')
-      }).length
-      return [{ label: 'Win Rate', value: Math.round((wins / entries.length) * 100), count: entries.length }]
+      // Find any select/text column that has a "win"-like value
+      const allResolved = entries.map((e) =>
+        e.values.map((v) => resolveValue(v.value, v.property).toLowerCase())
+      )
+      const filled = allResolved.filter((vals) => vals.some((v) => v.trim() !== ''))
+      if (filled.length === 0) return []
+      const wins = filled.filter((vals) => vals.some((v) => v === 'win')).length
+      return [{ label: 'Win Rate', value: Math.round((wins / filled.length) * 100), count: filled.length }]
     }
     return []
   }
 
-  // Group by a column
+  // Group by a column — try exact match first, then partial match
+  const colLower = groupBy.toLowerCase()
   const groups = new Map<string, Entry[]>()
   for (const entry of entries) {
-    const key = getColValue(entry, groupBy) || '(empty)'
+    // Try exact (case-insensitive) match first
+    let key = getColValue(entry, groupBy)
+    // If not found, try finding a column whose name contains the groupBy string
+    if (!key) {
+      const fallbackVal = entry.values.find(
+        (v) => v.property.name.toLowerCase().includes(colLower) || colLower.includes(v.property.name.toLowerCase())
+      )
+      if (fallbackVal) key = resolveValue(fallbackVal.value, fallbackVal.property)
+    }
+    if (!key) continue
     const arr = groups.get(key) ?? []
     arr.push(entry)
     groups.set(key, arr)
   }
 
+  // Seed all select options (including those with 0 count) from the column definition
+  const matchedProp = properties.find(
+    (p) => p.name.toLowerCase() === colLower || p.name.toLowerCase().includes(colLower) || colLower.includes(p.name.toLowerCase())
+  )
+  if (matchedProp && (matchedProp.type === 'select' || matchedProp.type === 'multi_select')) {
+    try {
+      const cfg = JSON.parse(matchedProp.config ?? '{}') as { options?: Array<{ id: string; label: string }> }
+      for (const opt of cfg.options ?? []) {
+        if (!groups.has(opt.label)) groups.set(opt.label, [])
+      }
+    } catch { /* ignore */ }
+  }
+
+  if (groups.size === 0) return []
+
   return Array.from(groups.entries())
     .map(([label, grouped]) => {
-      let value = grouped.length
-      if (metric === 'winrate') {
-        const wins = grouped.filter((e) => {
-          const vals = e.values.map((v) => v.value.toLowerCase())
-          return vals.includes('win')
-        }).length
-        value = Math.round((wins / grouped.length) * 100)
-      }
+      const value = metric === 'winrate'
+        ? Math.round((grouped.length / entries.length) * 100)
+        : grouped.length
       return { label, value, count: grouped.length }
     })
-    .sort((a, b) => b.value - a.value)
+    .sort((a, b) => b.count - a.count)
     .slice(0, 12)
 }
 
@@ -188,14 +228,17 @@ function PieChart({ data, metric }: { data: DataPoint[]; metric: string }) {
 
 export default function DatabaseChartBlock({ databaseId, chartType, chartTitle, chartGroupBy, chartMetric }: Props) {
   const [entries, setEntries] = useState<Entry[] | null>(null)
+  const [properties, setProperties] = useState<Property[]>([])
   const [error, setError] = useState<string | null>(null)
+  const { subscribe } = useDatabaseRefresh()
 
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/databases/${databaseId}`)
       if (!res.ok) { setError('Failed to load'); return }
-      const data = await res.json() as { entries: Entry[] }
+      const data = await res.json() as { entries: Entry[]; properties: Property[] }
       setEntries(data.entries ?? [])
+      setProperties(data.properties ?? [])
     } catch {
       setError('Failed to load')
     }
@@ -204,10 +247,11 @@ export default function DatabaseChartBlock({ databaseId, chartType, chartTitle, 
   useEffect(() => {
     void load()
     const interval = setInterval(() => void load(), 30_000)
-    return () => clearInterval(interval)
-  }, [load])
+    const unsub = subscribe(databaseId, () => void load())
+    return () => { clearInterval(interval); unsub() }
+  }, [load, subscribe, databaseId])
 
-  const data = entries ? buildData(entries, chartGroupBy ?? '', chartMetric ?? 'count') : []
+  const data = entries ? buildData(entries, chartGroupBy ?? '', chartMetric ?? 'count', properties) : []
 
   if (error) {
     return (
@@ -242,7 +286,13 @@ export default function DatabaseChartBlock({ databaseId, chartType, chartTitle, 
       {data.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 text-center">
           <p className="text-zinc-500 text-sm">No data yet</p>
-          <p className="text-zinc-600 text-xs mt-1">Add entries to the table to see the chart</p>
+          <p className="text-zinc-600 text-xs mt-1">
+            {entries.length === 0
+              ? 'Add entries to the table to see the chart'
+              : chartGroupBy
+              ? `Fill in the "${chartGroupBy}" column for your entries`
+              : 'Add entries to the table to see the chart'}
+          </p>
         </div>
       ) : chartType === 'pie' ? (
         <PieChart data={data} metric={chartMetric ?? 'count'} />

@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { PropertyType, SELECT_COLORS, SelectOption } from '@/lib/database'
+import { createPortal } from 'react-dom'
+import { getOptionStyle, PropertyType, SelectOption } from '@/lib/database'
 
 type Props = {
   value: string
@@ -84,12 +85,14 @@ export default function CellRenderer({
 
   if (type === 'select') {
     const selected = options.find((o) => o.id === local)
-    const colorSet = SELECT_COLORS.find((c) => c.name === selected?.color) ?? SELECT_COLORS[0]
     return (
       <div className="relative">
         <button onClick={() => setEditing((p) => !p)} className="w-full truncate text-left">
           {selected ? (
-            <span className={`inline-block max-w-full truncate rounded-full px-2 py-0.5 text-xs ${colorSet.bg} ${colorSet.text}`}>
+            <span
+              className="inline-block max-w-full truncate rounded-full px-2 py-0.5 text-xs"
+              style={getOptionStyle(selected.color)}
+            >
               {selected.label}
             </span>
           ) : (
@@ -104,18 +107,20 @@ export default function CellRenderer({
             >
               None
             </button>
-            {options.map((opt) => {
-              const c = SELECT_COLORS.find((x) => x.name === opt.color) ?? SELECT_COLORS[0]
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => save(opt.id)}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-zinc-800"
+            {options.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => save(opt.id)}
+                className="flex w-full items-center gap-2 rounded px-2 py-1 text-left hover:bg-zinc-800"
+              >
+                <span
+                  className="rounded-full px-2 py-0.5 text-xs"
+                  style={getOptionStyle(opt.color)}
                 >
-                  <span className={`rounded-full px-2 py-0.5 text-xs ${c.bg} ${c.text}`}>{opt.label}</span>
-                </button>
-              )
-            })}
+                  {opt.label}
+                </span>
+              </button>
+            ))}
           </div>
         )}
       </div>
@@ -164,6 +169,10 @@ export default function CellRenderer({
     )
   }
 
+  if (type === 'image') {
+    return <ImageCell value={local} onSave={(v) => save(v)} />
+  }
+
   if (editing) {
     return (
       <input
@@ -180,6 +189,128 @@ export default function CellRenderer({
   return (
     <button onClick={() => setEditing(true)} className={`block w-full truncate text-left text-zinc-300 hover:text-white ${textSize}`}>
       {local || <span className="text-zinc-600">Empty</span>}
+    </button>
+  )
+}
+
+// ── Image cell ─────────────────────────────────────────────────────────────
+
+function ImageCell({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [pasting, setPasting] = useState(false)
+  const [lightbox, setLightbox] = useState(false)
+  const zoneRef = useRef<HTMLDivElement>(null)
+
+  // When paste zone is open, listen for Ctrl+V / paste events
+  useEffect(() => {
+    if (!pasting) return
+    const handler = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items
+      if (!items) return
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (!file) continue
+          const reader = new FileReader()
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              onSave(reader.result)
+              setPasting(false)
+            }
+          }
+          reader.readAsDataURL(file)
+          e.preventDefault()
+          break
+        }
+      }
+    }
+    window.addEventListener('paste', handler)
+    return () => window.removeEventListener('paste', handler)
+  }, [pasting, onSave])
+
+  // Close paste zone on outside click
+  useEffect(() => {
+    if (!pasting) return
+    const handler = (e: MouseEvent) => {
+      if (zoneRef.current && !zoneRef.current.contains(e.target as Node)) {
+        setPasting(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [pasting])
+
+  // Close lightbox on Escape
+  useEffect(() => {
+    if (!lightbox) return
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightbox(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [lightbox])
+
+  if (value) {
+    return (
+      <>
+        <button
+          onClick={() => setLightbox(true)}
+          className="flex items-center justify-center w-full h-8 overflow-hidden rounded"
+          title="Click to view"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="screenshot" className="max-h-8 max-w-full object-contain rounded" />
+        </button>
+
+        {lightbox && createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            onClick={() => setLightbox(false)}
+          >
+            <div
+              className="relative max-w-[90vw] max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={value}
+                alt="screenshot"
+                className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl object-contain"
+              />
+              <button
+                onClick={() => setLightbox(false)}
+                className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-800 border border-zinc-600 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors shadow-lg text-sm"
+                title="Close (Esc)"
+              >
+                ✕
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+      </>
+    )
+  }
+
+  if (pasting) {
+    return (
+      <div
+        ref={zoneRef}
+        className="flex items-center justify-center rounded-lg border border-dashed border-zinc-500 bg-zinc-800/60 px-2 py-1.5 text-[10px] text-zinc-400 cursor-default select-none"
+      >
+        Press Ctrl+V to paste
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setPasting(true)}
+      className="flex items-center justify-center gap-1 w-full text-zinc-600 hover:text-zinc-400 transition-colors"
+      title="Click then Ctrl+V to paste image"
+    >
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1" y="1" width="11" height="11" rx="2" />
+        <circle cx="4.5" cy="4.5" r="1" fill="currentColor" stroke="none" />
+        <polyline points="1,9 4,6 6,8 8.5,5.5 12,9" />
+      </svg>
     </button>
   )
 }

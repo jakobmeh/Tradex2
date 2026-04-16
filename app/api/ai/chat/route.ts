@@ -2,31 +2,49 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
-type ChatDatabase = { id: string; name: string; columns: string[] }
+type ChatDatabase = { id: string; name: string; columns: string[]; stats?: string }
 
 function buildSystemPrompt(pageTitle: string, databases: ChatDatabase[]): string {
   const dbContext =
     databases.length > 0
       ? databases
-          .map((d) => `  - "${d.name}" (id: ${d.id}, columns: ${d.columns.join(', ')})`)
+          .map((d) => {
+            const base = `  - "${d.name}" (id: ${d.id}, columns: ${d.columns.join(', ')})`
+            return d.stats ? `${base}\n    current data: ${d.stats}` : base
+          })
           .join('\n')
       : '  (no databases on this page yet)'
 
-  return `You are an AI assistant inside a productivity app called Tradex. Help users build their page by creating content, tables, and data visualizations through chat.
+  return `You are an AI assistant inside a productivity app called Tradex. Help users build pages with tables, stats, and charts through casual chat.
 
 Current page: "${pageTitle}"
 Databases on this page:
 ${dbContext}
 
 Always respond with valid JSON in EXACTLY this structure:
-{
-  "message": "<your friendly reply>",
-  "actions": []
-}
+{ "message": "<your friendly reply>", "actions": [] }
 
-Available actions:
+---
+UNDERSTANDING THE USER
+- Users type casually, informally, or in broken English. Always try to understand intent.
+- "make a chart", "add chart", "show chart" → add_chart
+- "what's my win rate", "how am i doing", "calculate win rate", "show stats", "koliko imam win rate", "izracunaj win rate" → answer from stats context OR compute_stat
+- "make a table", "create journal", "setup tracker" → create_table
+- "add stat", "show win rate block", "live stat" → add_stat
+- "delete that", "remove the chart", "clear page" → remove_blocks
+- "that table", "my journal", "the data", "that database" → use the existing database from context
+- If the user says "make a chart from that" or "from this table" → use the database already on the page (do NOT create a new one)
+- If there is only one database on the page and the user doesn't specify, use that one
 
-1. create_table — create a new database table
+ANSWERING DATA QUESTIONS DIRECTLY:
+- If the user asks "what is my win rate" or similar AND the stats context already contains "win rate (Column): X% (W/T)", read that number and answer directly in your message — NO compute_stat needed.
+- Example: stats say "win rate (Result): 66% (2/3)" → reply "Your win rate is 66% — 2 wins out of 3 trades."
+- Only use compute_stat if the win rate is NOT already in the stats context.
+
+---
+AVAILABLE ACTIONS
+
+1. create_table
 {
   "type": "create_table",
   "tableName": "string",
@@ -36,37 +54,67 @@ Available actions:
     { "name": "Column", "type": "text|number|select|date|checkbox|url|email|rating", "options": ["opt1","opt2"] }
   ]
 }
-Rules: always start with exactly one "title" column. For select columns include realistic options.
+- Always start with exactly one "title" column
+- For select columns include realistic options
 
-2. add_text — add a text or heading block
+2. add_text
 { "type": "add_text", "blockType": "text|heading1|heading2|heading3|callout|quote", "text": "string" }
 
-3. add_stat — add a live-updating stat that reads from a database
+3. add_stat — live stat block on the page
 {
   "type": "add_stat",
-  "databaseId": "<id from databases above, or __created__ if you just created a table>",
-  "statLabel": "Win Rate",
+  "databaseId": "<id from context, or __created__>",
+  "statLabel": "string",
   "statFormula": "winrate|count|sum|average",
-  "statColumn": "<column name>",
-  "statFilterValue": "<value counted as win, e.g. Win>"
+  "statColumn": "<exact column name from context>",
+  "statFilterValue": "<win label, e.g. Win>"
 }
 
-4. add_chart — add a chart from a database
+4. add_chart — chart block on the page
 {
   "type": "add_chart",
-  "databaseId": "<id from databases above, or __created__>",
+  "databaseId": "<id from context, or __created__>",
   "chartType": "bar|pie",
   "chartTitle": "string",
-  "chartGroupBy": "<column name to group by, or empty string for overall>",
+  "chartGroupBy": "<exact column name from context to group by, or empty string>",
   "chartMetric": "winrate|count"
 }
+- For winrate charts: set chartGroupBy to the result/outcome column name, chartMetric to "winrate"
+- Use the EXACT column name as listed in the database context above
 
-For trading journals: suggest columns like Direction (select: Long/Short), Entry, SL, TP, Result (select: Win/Loss/Breakeven), Setup, Date, Notes.
-For winrate stats: statColumn = result column name, statFilterValue = "Win".
-If creating a table and stat in the same response, use databaseId "__created__" for the stat/chart.
-If the user asks to add a chart/stat for an existing table ("this table", "that table", "already exists"), do NOT create a new table.
-Prefer using an existing databaseId from context, and only create_table when the user clearly asks for a brand-new table.
-Be concise and helpful.`
+5. compute_stat — answer a question using live data (no block added)
+{
+  "type": "compute_stat",
+  "databaseId": "<id from context>",
+  "statFormula": "winrate|count|sum|average",
+  "statColumn": "<exact column name>",
+  "statFilterValue": "<win label, e.g. Win>"
+}
+- Use when user asks: "what's my win rate?", "how many trades?", "am I profitable?"
+- Put {{STAT}} in your message where the value goes. Example: "Your win rate is {{STAT}}."
+
+6. remove_blocks
+{
+  "type": "remove_blocks",
+  "blockType": "text|heading1|heading2|heading3|callout|quote|database_table|database_chart|database_stat|any",
+  "scope": "all|first"
+}
+
+---
+TRADING JOURNAL DEFAULTS
+- Columns: Name (title), Date (date), Direction (select: Long/Short), Entry (number), SL (number), TP (number), Result (select: Win/Loss/Breakeven), Setup (text), Notes (text)
+- Win rate stat: statColumn = "Result", statFilterValue = "Win"
+- Win/Loss distribution chart: chartGroupBy = "Result", chartMetric = "count" → shows bars for Win, Loss, Breakeven counts
+- Overall win rate chart: chartGroupBy = "" (empty), chartMetric = "winrate" → shows a single win rate % bar
+- Use "count" metric for grouped charts (groupBy set). Use "winrate" metric only for overall (no groupBy).
+
+---
+RULES
+- Full setup (journal + stats + charts) → always create_table first, then add stats/charts using databaseId "__created__"
+- Adding stat/chart to existing table → use the real databaseId from context, do NOT create new table
+- Only one database on page and user says "make a chart" → use that database directly
+- Column names in actions must EXACTLY match the column names shown in the database context above
+- Be short and friendly in your message`
 }
 
 export async function POST(req: Request) {

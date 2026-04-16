@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
+import { usePageTitles } from '@/lib/page-title-context'
 
 type Page = {
   id: string
@@ -36,8 +38,10 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
   const [hovering, setHovering] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const { titles } = usePageTitles()
   const isActive = pathname === `/dashboard/pages/${page.id}`
   const hasChildren = (page.children?.length ?? 0) > 0
+  const displayTitle = titles[page.id] ?? page.title
 
   const createSubPage = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -73,7 +77,7 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
 
         <Link href={`/dashboard/pages/${page.id}`} className="flex min-w-0 flex-1 items-center gap-2 truncate">
           <span className="text-sm">{page.icon ?? '\ud83d\udcc4'}</span>
-          <span className="truncate">{page.title || 'Untitled'}</span>
+          <span className="truncate">{displayTitle || 'Untitled'}</span>
         </Link>
 
         {hovering ? (
@@ -189,12 +193,23 @@ export default function Sidebar({ workspace, onMobileClose }: { workspace: Works
         </section>
       </div>
 
-      <div className="border-t border-[#6f592d]/18 p-3">
+      <div className="border-t border-[#6f592d]/18 p-3 space-y-2">
         <button
           onClick={createPage}
           className="inline-flex h-11 w-full items-center justify-center rounded-[1rem] bg-[linear-gradient(90deg,#8b6122,#d5aa5e,#f0d289)] px-4 text-sm font-semibold text-[#140d05] shadow-[0_14px_30px_rgba(169,124,40,0.22)] transition hover:brightness-110"
         >
           + New page
+        </button>
+        <button
+          onClick={() => void signOut({ callbackUrl: '/' })}
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[1rem] border border-[#3a2a14]/60 px-4 text-xs font-medium text-[#7a6040] transition hover:border-[#6a4a20]/60 hover:bg-[#0f0c08] hover:text-[#c09050]"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4.5 2H2.5C2 2 1.5 2.5 1.5 3V9C1.5 9.5 2 10 2.5 10H4.5" />
+            <polyline points="8,4 10.5,6 8,8" />
+            <line x1="10.5" y1="6" x2="4.5" y2="6" />
+          </svg>
+          Sign out
         </button>
       </div>
     </div>

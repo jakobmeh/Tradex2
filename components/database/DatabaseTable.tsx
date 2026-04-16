@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import CellRenderer from './CellRenderer'
 import ColumnHeader from './ColumnHeader'
 import { PROPERTY_TYPES, PropertyType } from '@/lib/database'
+import { useDatabaseRefresh } from '@/lib/database-refresh-context'
 
 type Property = { id: string; name: string; type: string; config: string; order: number }
 type Value = { propertyId: string; value: string; property: Property }
@@ -12,6 +13,7 @@ type Database = { id: string; name: string; icon: string | null; properties: Pro
 
 export default function DatabaseTable({ initial, embedded = false }: { initial: Database; embedded?: boolean }) {
   const [db, setDb] = useState(initial)
+  const { notify } = useDatabaseRefresh()
   const [filter, setFilter] = useState('')
   const [addingCol, setAddingCol] = useState(false)
   const [newColName, setNewColName] = useState('')
@@ -95,8 +97,9 @@ export default function DatabaseTable({ initial, embedded = false }: { initial: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ propertyId, value }),
       })
+      notify(db.id)
     }
-  }, [])
+  }, [db.id, notify])
 
   const updateProperty = useCallback((id: string, data: Partial<Property>) => {
     setDb((p) => ({ ...p, properties: p.properties.map((pr) => (pr.id === id ? { ...pr, ...data } : pr)) }))

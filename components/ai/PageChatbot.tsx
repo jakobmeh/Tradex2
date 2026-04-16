@@ -32,12 +32,19 @@ type ChatAction =
   | {
       type: 'remove_blocks'
       blockIds?: string[]
-      blockType?: 'database_table' | 'database_chart' | 'database_stat' | 'any'
+      blockType?: string
       databaseId?: string
       scope?: 'all' | 'first'
     }
+  | {
+      type: 'compute_stat'
+      databaseId?: string
+      statFormula?: string
+      statColumn?: string
+      statFilterValue?: string
+    }
 
-type DatabaseRef = { id: string; name: string; columns: string[] }
+type DatabaseRef = { id: string; name: string; columns: string[]; stats?: string }
 type BlockRef = { id: string; type: BlockType; databaseId?: string }
 
 type Props = {
@@ -73,6 +80,8 @@ export default function PageChatbot({
   const [databases, setDatabases] = useState<DatabaseRef[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   // Re-fetch database info whenever the set of databases on the page changes.
   // This runs on open AND whenever databaseIds changes mid-session (e.g. after creating a table).
@@ -85,8 +94,61 @@ export default function PageChatbot({
           try {
             const res = await fetch(`/api/databases/${id}`)
             if (!res.ok) return null
-            const db = await res.json() as { id: string; name: string; properties: Array<{ name: string }> }
-            return { id: db.id, name: db.name, columns: db.properties.map((p) => p.name) }
+            const db = await res.json() as {
+              id: string
+              name: string
+              properties: Array<{ name: string; type: string; config: string }>
+              entries: Array<{ values: Array<{ value: string; property: { name: string; type: string; config: string } }> }>
+            }
+
+            // Build a stats summary so the AI can answer questions about the data
+            const entries = db.entries ?? []
+            const statLines: string[] = [`total entries: ${entries.length}`]
+
+            const resolveVal = (raw: string, propConfig: string, propType: string): string => {
+              if (!raw?.trim()) return ''
+              if (propType === 'select' || propType === 'multi_select') {
+                try {
+                  const cfg = JSON.parse(propConfig ?? '{}') as { options?: Array<{ id: string; label: string }> }
+                  return cfg.options?.find(o => o.id === raw)?.label ?? raw
+                } catch { return raw }
+              }
+              return raw
+            }
+
+            for (const prop of db.properties) {
+              if (prop.type === 'select' || prop.type === 'multi_select') {
+                const dist: Record<string, number> = {}
+                for (const entry of entries) {
+                  const v = entry.values.find(v => v.property.name === prop.name)
+                  if (!v) continue
+                  const label = resolveVal(v.value, prop.config, prop.type)
+                  if (label) dist[label] = (dist[label] ?? 0) + 1
+                }
+                if (Object.keys(dist).length > 0) {
+                  const distStr = Object.entries(dist).map(([k, v]) => `${k}:${v}`).join(', ')
+                  statLines.push(`${prop.name} distribution: {${distStr}}`)
+                  const totalFilled = Object.values(dist).reduce((a, b) => a + b, 0)
+                  const wins = dist['Win'] ?? dist['win'] ?? dist['WIN'] ?? 0
+                  if (wins > 0) statLines.push(`win rate (${prop.name}): ${Math.round((wins / totalFilled) * 100)}% (${wins}/${totalFilled})`)
+                }
+              } else if (prop.type === 'number') {
+                const nums = entries
+                  .map(e => Number(e.values.find(v => v.property.name === prop.name)?.value ?? ''))
+                  .filter(n => !isNaN(n) && n !== 0)
+                if (nums.length > 0) {
+                  const sum = nums.reduce((a, b) => a + b, 0)
+                  statLines.push(`${prop.name}: sum=${sum}, avg=${Math.round((sum / nums.length) * 100) / 100}`)
+                }
+              }
+            }
+
+            return {
+              id: db.id,
+              name: db.name,
+              columns: db.properties.map((p) => p.name),
+              stats: statLines.join('; '),
+            }
           } catch { return null }
         })
       )
@@ -101,6 +163,20 @@ export default function PageChatbot({
       setTimeout(() => inputRef.current?.focus(), 60)
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (
+        panelRef.current?.contains(target) ||
+        toggleRef.current?.contains(target)
+      ) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
   useEffect(() => {
@@ -124,8 +200,9 @@ export default function PageChatbot({
     return databases.find((db) => db.name.trim().toLowerCase() === wanted) ?? null
   }
 
-  const executeActions = async (actions: ChatAction[]): Promise<string[]> => {
+  const executeActions = async (actions: ChatAction[]): Promise<{ log: string[]; messageOverrides: Record<string, string> }> => {
     const log: string[] = []
+    const messageOverrides: Record<string, string> = {}
     let lastCreatedDbId: string | null = null
 
     for (const action of actions) {
@@ -138,6 +215,15 @@ export default function PageChatbot({
           const existingDb = findExistingDatabaseByName(name)
           if (existingDb) {
             lastCreatedDbId = existingDb.id
+            // Add a table block for the existing DB if one isn't already on the page
+            const alreadyOnPage = blockRefs.some(
+              (b) => b.type === 'database_table' && b.databaseId === existingDb.id
+            )
+            if (!alreadyOnPage) {
+              try {
+                await onAddBlock('database_table', { databaseId: existingDb.id })
+              } catch { /* non-fatal */ }
+            }
             log.push(`Using existing table: ${existingDb.name}`)
             continue
           }
@@ -157,11 +243,21 @@ export default function PageChatbot({
                 : '{}',
           }))
 
+          // Create the database first — set lastCreatedDbId before adding the block
+          // so that subsequent stat/chart actions can use it even if block add fails
           const dbId = await onCreateTableFromSchema(name, icon, columnsWithConfig)
           lastCreatedDbId = dbId
 
-          await onAddBlock('database_table', { databaseId: dbId })
-          log.push(`Created table: ${name}`)
+          // Add the table block separately so a block-add failure doesn't
+          // prevent stat/chart actions from finding the database
+          let tableBlockAdded = false
+          try {
+            await onAddBlock('database_table', { databaseId: dbId })
+            tableBlockAdded = true
+          } catch {
+            // block failed but database exists — stat/chart can still use it
+          }
+          log.push(tableBlockAdded ? `Created table: ${name}` : `⚠ Table "${name}" created in DB but block failed to add — try refreshing`)
         } else if (action.type === 'add_text') {
           const type = (action.blockType as BlockType) || 'text'
           await onAddBlock(type, { text: action.text ?? '' })
@@ -188,13 +284,75 @@ export default function PageChatbot({
             chartMetric: action.chartMetric ?? 'count',
           })
           log.push(`Added chart: ${action.chartTitle}`)
+        } else if (action.type === 'compute_stat') {
+          const dbId = resolveDbId(action.databaseId, lastCreatedDbId)
+          if (!dbId) { log.push('⚠ compute_stat: no database found'); continue }
+          const res = await fetch(`/api/databases/${dbId}`)
+          if (!res.ok) { log.push('⚠ compute_stat: failed to load data'); continue }
+          const data = await res.json() as {
+            entries: Array<{ values: Array<{ value: string; property: { name: string; type: string; config: string } }> }>
+          }
+          const entries = data.entries ?? []
+          const formula = action.statFormula ?? 'winrate'
+          const col = (action.statColumn ?? '').toLowerCase()
+          const winVal = (action.statFilterValue ?? 'Win').toLowerCase()
+
+          const resolveEntryVal = (raw: string, prop: { type: string; config: string }): string => {
+            if (!raw?.trim()) return ''
+            if (prop.type === 'select' || prop.type === 'multi_select') {
+              try {
+                const cfg = JSON.parse(prop.config ?? '{}') as { options?: Array<{ id: string; label: string }> }
+                return cfg.options?.find(o => o.id === raw)?.label ?? raw
+              } catch { return raw }
+            }
+            return raw
+          }
+
+          let result = '—'
+          if (formula === 'count') {
+            result = String(entries.length)
+          } else if (formula === 'winrate') {
+            const vals = entries.map(e => {
+              const v = e.values.find(v => v.property.name.toLowerCase() === col)
+              if (!v) return ''
+              return resolveEntryVal(v.value, v.property)
+            })
+            const filled = vals.filter(v => v.trim() !== '')
+            if (filled.length > 0) {
+              const wins = filled.filter(v => v.toLowerCase() === winVal).length
+              result = `${Math.round((wins / filled.length) * 100)}% (${wins}/${filled.length})`
+            }
+          } else if (formula === 'sum' || formula === 'average') {
+            const nums = entries
+              .map(e => e.values.find(v => v.property.name.toLowerCase() === col)?.value ?? '')
+              .map(Number).filter(n => !isNaN(n) && n !== 0)
+            if (nums.length > 0) {
+              const sum = nums.reduce((a, b) => a + b, 0)
+              result = formula === 'sum' ? String(sum) : String(Math.round((sum / nums.length) * 100) / 100)
+            }
+          }
+          messageOverrides['{{STAT}}'] = result
+          log.push(`Computed ${formula}: ${result}`)
+        } else if (action.type === 'remove_blocks') {
+          const targetType = action.blockType ?? 'any'
+          const scope = action.scope ?? 'all'
+          const matching = blockRefs.filter((b) =>
+            targetType === 'any' ? true : b.type === targetType
+          )
+          const toRemove = scope === 'first' ? matching.slice(0, 1) : matching
+          if (toRemove.length === 0) {
+            log.push('⚠ No matching blocks found to remove')
+          } else {
+            await onDeleteBlocks(toRemove.map((b) => b.id))
+            log.push(`Removed ${toRemove.length} block${toRemove.length > 1 ? 's' : ''}`)
+          }
         }
       } catch {
         log.push(`⚠ Action failed: ${action.type}`)
       }
     }
 
-    return log
+    return { log, messageOverrides }
   }
 
   const send = async () => {
@@ -207,6 +365,55 @@ export default function PageChatbot({
     setMessages(newMessages)
     setLoading(true)
 
+    // Refresh database stats before sending so AI has up-to-date data
+    let freshDatabases = databases
+    if (databaseIds.length > 0) {
+      const refreshed = await Promise.all(
+        databaseIds.map(async (id) => {
+          try {
+            const r = await fetch(`/api/databases/${id}`)
+            if (!r.ok) return null
+            const db = await r.json() as {
+              id: string; name: string
+              properties: Array<{ name: string; type: string; config: string }>
+              entries: Array<{ values: Array<{ value: string; property: { name: string; type: string; config: string } }> }>
+            }
+            const entries = db.entries ?? []
+            const statLines: string[] = [`total entries: ${entries.length}`]
+            const resolveVal2 = (raw: string, propConfig: string, propType: string): string => {
+              if (!raw?.trim()) return ''
+              if (propType === 'select' || propType === 'multi_select') {
+                try {
+                  const cfg = JSON.parse(propConfig ?? '{}') as { options?: Array<{ id: string; label: string }> }
+                  return cfg.options?.find(o => o.id === raw)?.label ?? raw
+                } catch { return raw }
+              }
+              return raw
+            }
+            for (const prop of db.properties) {
+              if (prop.type === 'select' || prop.type === 'multi_select') {
+                const dist: Record<string, number> = {}
+                for (const entry of entries) {
+                  const v = entry.values.find(v => v.property.name === prop.name)
+                  if (!v) continue
+                  const label = resolveVal2(v.value, prop.config, prop.type)
+                  if (label) dist[label] = (dist[label] ?? 0) + 1
+                }
+                if (Object.keys(dist).length > 0) {
+                  statLines.push(`${prop.name} distribution: {${Object.entries(dist).map(([k,v]) => `${k}:${v}`).join(', ')}}`)
+                  const totalFilled = Object.values(dist).reduce((a,b) => a+b, 0)
+                  const wins = dist['Win'] ?? dist['win'] ?? dist['WIN'] ?? 0
+                  if (wins > 0) statLines.push(`win rate (${prop.name}): ${Math.round((wins/totalFilled)*100)}% (${wins}/${totalFilled})`)
+                }
+              }
+            }
+            return { id: db.id, name: db.name, columns: db.properties.map(p => p.name), stats: statLines.join('; ') }
+          } catch { return null }
+        })
+      )
+      freshDatabases = refreshed.filter(Boolean) as typeof databases
+    }
+
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -215,7 +422,7 @@ export default function PageChatbot({
           messages: newMessages,
           pageContext: {
             title: pageTitle,
-            databases,
+            databases: freshDatabases,
           },
         }),
       })
@@ -230,13 +437,20 @@ export default function PageChatbot({
 
       const actions = (payload.actions ?? []) as ChatAction[]
 
-      // Execute all actions and collect log
+      // Execute all actions and collect log + message overrides
       let log: string[] = []
+      let messageOverrides: Record<string, string> = {}
       if (actions.length > 0) {
-        log = await executeActions(actions)
+        ;({ log, messageOverrides } = await executeActions(actions))
       }
 
-      setMessages((prev) => [...prev, { role: 'assistant', content: payload.message ?? '' }])
+      // Apply any {{PLACEHOLDER}} replacements into the AI message
+      let finalMessage = payload.message ?? ''
+      for (const [placeholder, value] of Object.entries(messageOverrides)) {
+        finalMessage = finalMessage.replaceAll(placeholder, value)
+      }
+
+      setMessages((prev) => [...prev, { role: 'assistant', content: finalMessage }])
       if (log.length > 0) setActionsLog((prev) => [...prev.slice(-20), ...log])
     } catch {
       setError('Network error')
@@ -256,6 +470,7 @@ export default function PageChatbot({
     <>
       {/* Floating toggle button */}
       <button
+        ref={toggleRef}
         onClick={() => setOpen((v) => !v)}
         className={[
           'fixed bottom-6 right-6 z-50',
@@ -285,7 +500,7 @@ export default function PageChatbot({
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 flex flex-col w-80 sm:w-96 h-[520px] sm:h-[560px] m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
+        <div ref={panelRef} className="fixed bottom-0 right-0 z-50 flex flex-col w-80 sm:w-96 h-[520px] sm:h-[560px] m-4 sm:m-6 rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
             <div className="flex items-center gap-2">

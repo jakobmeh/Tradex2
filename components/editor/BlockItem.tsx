@@ -7,6 +7,7 @@ import EmbeddedDatabaseBlock from './EmbeddedDatabaseBlock'
 import SlashMenu from './SlashMenu'
 import DatabaseStatBlock from '@/components/blocks/DatabaseStatBlock'
 import DatabaseChartBlock from '@/components/blocks/DatabaseChartBlock'
+import DatabaseChartRowBlock from '@/components/blocks/DatabaseChartRowBlock'
 import { Block, BlockContent, BlockType } from '@/lib/blocks'
 
 type Props = {
@@ -363,6 +364,27 @@ export default function BlockItem({
           chartTitle={content.chartTitle ?? 'Chart'}
           chartGroupBy={content.chartGroupBy ?? ''}
           chartMetric={content.chartMetric ?? 'count'}
+        />
+      </div>
+    )
+  }
+
+  if (block.type === 'database_chart_row') {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="relative group py-2"
+        {...sharedHandlers}
+      >
+        {blockControls}
+        <DatabaseChartRowBlock
+          databaseId={content.databaseId ?? ''}
+          pageId={block.pageId}
+          charts={content.charts ?? []}
+          onUpdate={(charts, databaseId) =>
+            onUpdate(block.id, { ...content, databaseId, charts })
+          }
         />
       </div>
     )

@@ -67,6 +67,7 @@ function DragGhost({ block }: { block: Block }) {
   if (block.type === 'database_table') return <span className="text-zinc-400 text-sm italic">Database Table</span>
   if (block.type === 'database_stat') return <span className="text-zinc-400 text-sm italic">Live Stat</span>
   if (block.type === 'database_chart') return <span className="text-zinc-400 text-sm italic">Chart</span>
+  if (block.type === 'database_chart_row') return <span className="text-zinc-400 text-sm italic">Chart Row</span>
   if (block.type === 'callout') return <span className="text-zinc-200 text-sm">! {text || '...'}</span>
   return <span className="text-zinc-300 text-sm">{text || '...'}</span>
 }
@@ -139,7 +140,7 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
       setBlocks(optimistic)
       blocksRef.current = optimistic
       // Only focus text-editable blocks
-      if (!['database_table', 'database_stat', 'database_chart', 'divider'].includes(type)) {
+      if (!['database_table', 'database_stat', 'database_chart', 'database_chart_row', 'divider'].includes(type)) {
         focusEditableBlock(tempId)
       }
     }
@@ -192,7 +193,7 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
 
     void persistOrder(withReal)
 
-    if (!['database_table', 'database_stat', 'database_chart', 'divider'].includes(type)) {
+    if (!['database_table', 'database_stat', 'database_chart', 'database_chart_row', 'divider'].includes(type)) {
       focusEditableBlock(newBlock.id)
     }
   }, [focusEditableBlock, pageId, persistOrder])
@@ -410,7 +411,7 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
 
   const chatBlocks: ChatBlockRef[] = blocks.map((b) => {
     let databaseId: string | undefined
-    if (b.type === 'database_table' || b.type === 'database_stat' || b.type === 'database_chart') {
+    if (b.type === 'database_table' || b.type === 'database_stat' || b.type === 'database_chart' || b.type === 'database_chart_row') {
       try {
         const c = JSON.parse(b.content ?? '{}') as { databaseId?: string }
         databaseId = c.databaseId

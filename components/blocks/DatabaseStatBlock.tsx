@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useDatabaseRefresh } from '@/lib/database-refresh-context'
 
 type Entry = {
   id: string
@@ -15,18 +16,36 @@ type Props = {
   statFilterValue?: string  // value to count as "win" for winrate
 }
 
+/** Resolve a stored value to a human-readable label (handles select option IDs). */
+function resolveValue(raw: string, prop: { type: string; config: string }): string {
+  if (!raw?.trim()) return ''
+  if (prop.type === 'select' || prop.type === 'multi_select') {
+    try {
+      const cfg = JSON.parse(prop.config ?? '{}') as { options?: Array<{ id: string; label: string }> }
+      const opt = cfg.options?.find((o) => o.id === raw)
+      return opt?.label ?? raw
+    } catch { return raw }
+  }
+  return raw
+}
+
 function computeStat(entries: Entry[], formula: string, column: string, filterValue?: string): number | null {
   if (entries.length === 0) return null
 
-  const vals = entries
-    .map((e) => e.values.find((v) => v.property.name.toLowerCase() === column.toLowerCase())?.value ?? '')
+  const vals = entries.map((e) => {
+    const v = e.values.find((v) => v.property.name.toLowerCase() === column.toLowerCase())
+    if (!v) return ''
+    return resolveValue(v.value, v.property)
+  })
 
   if (formula === 'count') return entries.length
 
   if (formula === 'winrate') {
     const winVal = (filterValue ?? 'Win').toLowerCase()
-    const wins = vals.filter((v) => v.toLowerCase() === winVal).length
-    return entries.length > 0 ? Math.round((wins / entries.length) * 100) : 0
+    const filled = vals.filter((v) => v.trim() !== '')
+    if (filled.length === 0) return null
+    const wins = filled.filter((v) => v.toLowerCase() === winVal).length
+    return Math.round((wins / filled.length) * 100)
   }
 
   if (formula === 'sum') {
@@ -62,6 +81,7 @@ function getColor(value: number | null, formula: string): string {
 export default function DatabaseStatBlock({ databaseId, statLabel, statFormula, statColumn, statFilterValue }: Props) {
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const { subscribe } = useDatabaseRefresh()
 
   const load = useCallback(async () => {
     try {
@@ -76,10 +96,10 @@ export default function DatabaseStatBlock({ databaseId, statLabel, statFormula, 
 
   useEffect(() => {
     void load()
-    // Refresh every 30 seconds so the stat updates as trades are added
     const interval = setInterval(() => void load(), 30_000)
-    return () => clearInterval(interval)
-  }, [load])
+    const unsub = subscribe(databaseId, () => void load())
+    return () => { clearInterval(interval); unsub() }
+  }, [load, subscribe, databaseId])
 
   const value = entries ? computeStat(entries, statFormula, statColumn, statFilterValue) : null
   const display = formatValue(value, statFormula)

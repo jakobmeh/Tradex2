@@ -4,6 +4,8 @@ import Image from 'next/image'
 import { useState } from 'react'
 import Sidebar from './Sidebar'
 import dashboardBackground from '../../image.png'
+import { PageTitleProvider } from '@/lib/page-title-context'
+import { DatabaseRefreshProvider } from '@/lib/database-refresh-context'
 
 type Page = { id: string; title: string; icon: string | null; children?: Page[] }
 type Database = { id: string; name: string; icon: string | null }
@@ -25,6 +27,8 @@ export default function ShellLayout({
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
+    <PageTitleProvider>
+    <DatabaseRefreshProvider>
     <div className="relative flex h-screen overflow-hidden bg-[linear-gradient(180deg,#030303_0%,#070605_46%,#020202_100%)] text-[#f8edd2]">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <Image
@@ -87,5 +91,7 @@ export default function ShellLayout({
         {children}
       </main>
     </div>
+    </DatabaseRefreshProvider>
+    </PageTitleProvider>
   )
 }
