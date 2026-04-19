@@ -25,6 +25,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   sessions            Session[]
   workspaceMemberships WorkspaceMember[]
+  alarms              Alarm[]
 }
 
 model Account {
@@ -200,4 +201,21 @@ model DatabaseView {
   database   Database  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
 
   @@index([databaseId])
+}
+
+model Alarm {
+  id         String    @id @default(cuid())
+  userId     String
+  title      String
+  message    String    @db.Text
+  time       String    // "HH:MM" UTC
+  days       String    @default("daily") // "daily" | "weekdays" | "weekends"
+  isActive   Boolean   @default(true)
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
 }

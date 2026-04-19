@@ -64,6 +64,38 @@ export async function sendPasswordResetEmail({
   });
 }
 
+export async function sendAlarmEmail({
+  email,
+  name,
+  title,
+  message,
+}: {
+  email: string
+  name?: string | null
+  title: string
+  message: string
+}) {
+  const transporter = createTransport()
+  const from = process.env.SMTP_FROM ?? getRequiredEnv("SMTP_USER")
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: `⏰ Reminder: ${title}`,
+    text: [`Hello${name ? ` ${name}` : ""},`, "", `Reminder: ${title}`, "", message, "", "— AlphaLedger"].join("\n"),
+    html: `
+      <div style="font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #111827; max-width: 480px;">
+        <h2 style="margin-bottom:4px;">⏰ ${title}</h2>
+        <p style="color:#6b7280;font-size:13px;margin-top:0;">AlphaLedger reminder</p>
+        <div style="margin:24px 0;padding:16px 20px;border-radius:12px;background:#f9fafb;border:1px solid #e5e7eb;">
+          <p style="margin:0;font-size:15px;">${message}</p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;">You received this because you set up a reminder in AlphaLedger.</p>
+      </div>
+    `,
+  })
+}
+
 export async function sendSignupVerificationEmail({
   email,
   name,

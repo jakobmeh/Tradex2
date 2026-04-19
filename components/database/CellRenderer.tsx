@@ -142,8 +142,8 @@ export default function CellRenderer({
     }
 
     return (
-      <button onClick={() => setEditing(true)} className={`w-full truncate text-left text-zinc-300 hover:text-white ${textSize}`}>
-        {local ? new Date(local).toLocaleDateString() : <span className="text-zinc-600">-</span>}
+      <button suppressHydrationWarning onClick={() => setEditing(true)} className={`w-full truncate text-left text-zinc-300 hover:text-white ${textSize}`}>
+        {local ? new Date(local + 'T00:00:00').toLocaleDateString() : <span className="text-zinc-600">-</span>}
       </button>
     )
   }

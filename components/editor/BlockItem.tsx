@@ -39,6 +39,7 @@ export default function BlockItem({
   const [slashQuery, setSlashQuery] = useState('')
   const [showHandle, setShowHandle] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
+  const [showAlarmForm, setShowAlarmForm] = useState(false)
   const editableRef = useRef<HTMLDivElement>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -103,7 +104,7 @@ export default function BlockItem({
     }, 150)
   }, [block.id, content, onUpdate])
 
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
+  const handleInput = (e: React.SyntheticEvent<HTMLDivElement>) => {
     const val = e.currentTarget.textContent ?? ''
     textRef.current = val
     save(val)
@@ -147,6 +148,12 @@ export default function BlockItem({
       await onCreateDatabaseTable(block.id, suggestedName || undefined)
       return
     }
+
+    if (type === 'alarm') {
+      setShowAlarmForm(true)
+      return
+    }
+
 
     onTypeChange(block.id, type)
     if (type !== 'divider') {
@@ -225,6 +232,30 @@ export default function BlockItem({
   const sharedHandlers = {
     onMouseEnter: showBlockHandle,
     onMouseLeave: hideBlockHandle,
+  }
+
+  if (block.type === 'alarm') {
+    const utcTime = content.text?.split('|')[1] ?? ''
+    const alarmDays = content.text?.split('|')[2] ?? 'daily'
+    const alarmTitle = content.text?.split('|')[0] ?? 'Reminder'
+    const localTime = utcTime ? (() => {
+      const [h, m] = utcTime.split(':').map(Number)
+      const d = new Date(); d.setUTCHours(h, m, 0, 0)
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+    })() : ''
+    const dayLabel: Record<string,string> = { daily: 'every day', weekdays: 'weekdays', weekends: 'weekends' }
+    return (
+      <div ref={setNodeRef} style={style} className="relative group" {...sharedHandlers}>
+        {blockControls}
+        <div className="flex items-center gap-2.5 rounded-lg border border-zinc-700/60 bg-zinc-900/60 px-3 py-2">
+          <span className="text-base">⏰</span>
+          <div className="min-w-0 flex-1">
+            <span className="text-sm font-medium text-zinc-200">{alarmTitle}</span>
+            <span className="ml-2 text-xs text-zinc-500">{localTime} · {dayLabel[alarmDays] ?? alarmDays}</span>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (block.type === 'divider') {
@@ -434,6 +465,110 @@ export default function BlockItem({
           />
         </div>
       ) : null}
+
+      {showAlarmForm ? (
+        <InlineAlarmForm
+          onClose={() => setShowAlarmForm(false)}
+          onSave={(title, utcTime, days) => {
+            setShowAlarmForm(false)
+            onTypeChange(block.id, 'alarm')
+            onUpdate(block.id, { text: `${title}|${utcTime}|${days}` })
+          }}
+        />
+      ) : null}
     </div>
+  )
+}
+
+// ── Inline alarm creation form ───────────────────────────────────────────────
+
+function localToUtc(localTime: string): string {
+  const [h, m] = localTime.split(':').map(Number)
+  const d = new Date()
+  d.setHours(h, m, 0, 0)
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
+}
+
+function defaultLocalTime(): string {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function InlineAlarmForm({ onClose, onSave }: { onClose: () => void; onSave: (title: string, utcTime: string, days: string) => void }) {
+  const [title, setTitle] = useState('')
+  const [message, setMessage] = useState('')
+  const [time, setTime] = useState(defaultLocalTime)
+  const [days, setDays] = useState('daily')
+  const [saving, setSaving] = useState(false)
+
+  const submit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!title.trim()) return
+    setSaving(true)
+    await fetch('/api/alarms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, message, time: localToUtc(time), days }),
+    })
+    onSave(title, localToUtc(time), days)
+  }
+
+
+  return (
+    <form
+      onSubmit={e => void submit(e)}
+      className="my-2 rounded-xl border border-zinc-700 bg-zinc-900 p-4 shadow-xl"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-xs font-medium text-zinc-400">⏰ New Reminder</span>
+        <button type="button" onClick={onClose} className="text-zinc-600 hover:text-zinc-300 text-xs">✕</button>
+      </div>
+
+      <input
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        placeholder="Reminder title (e.g. Log today's trade)"
+        required
+        autoFocus
+        className="mb-2 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+      />
+      <input
+        value={message}
+        onChange={e => setMessage(e.target.value)}
+        placeholder="Message (optional)"
+        className="mb-2 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-zinc-500"
+      />
+      <div className="mb-3 flex gap-2">
+        <input
+          type="time"
+          value={time}
+          onChange={e => setTime(e.target.value)}
+          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-zinc-500"
+        />
+        <select
+          value={days}
+          onChange={e => setDays(e.target.value)}
+          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-zinc-500"
+        >
+          <option value="daily">Every day</option>
+          <option value="weekdays">Weekdays</option>
+          <option value="weekends">Weekends</option>
+        </select>
+      </div>
+      <p className="mb-3 text-[11px] text-zinc-600">Time is in your local timezone.</p>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Set reminder'}
+        </button>
+        <button type="button" onClick={onClose} className="rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-400 hover:bg-zinc-800">
+          Cancel
+        </button>
+      </div>
+    </form>
   )
 }

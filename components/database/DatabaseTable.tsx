@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CellRenderer from './CellRenderer'
 import ColumnHeader from './ColumnHeader'
+import CalendarView from './CalendarView'
 import { PROPERTY_TYPES, PropertyType } from '@/lib/database'
 import { useDatabaseRefresh } from '@/lib/database-refresh-context'
 
@@ -15,6 +16,7 @@ export default function DatabaseTable({ initial, embedded = false }: { initial: 
   const [db, setDb] = useState(initial)
   const { notify } = useDatabaseRefresh()
   const [filter, setFilter] = useState('')
+  const [view, setView] = useState<'table' | 'calendar'>('table')
   const [addingCol, setAddingCol] = useState(false)
   const [newColName, setNewColName] = useState('')
   const [newColType, setNewColType] = useState<PropertyType>('text')
@@ -179,11 +181,55 @@ export default function DatabaseTable({ initial, embedded = false }: { initial: 
           placeholder="Filter..."
           className={`rounded bg-zinc-800 text-white outline-none placeholder:text-zinc-600 ${compact ? 'w-36 px-2 py-1 text-xs' : 'w-48 px-3 py-1.5 text-sm'}`}
         />
+
+        {/* View switcher */}
+        <div className="flex items-center gap-1 rounded-md border border-zinc-700 p-0.5">
+          <button
+            onClick={() => setView('table')}
+            title="Table view"
+            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors ${
+              view === 'table' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <rect x="1" y="1" width="10" height="10" rx="1" />
+              <line x1="1" y1="4" x2="11" y2="4" />
+              <line x1="1" y1="7" x2="11" y2="7" />
+              <line x1="4" y1="4" x2="4" y2="11" />
+            </svg>
+            Table
+          </button>
+          <button
+            onClick={() => setView('calendar')}
+            title="Calendar view"
+            className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors ${
+              view === 'calendar' ? 'bg-zinc-700 text-white' : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+              <rect x="1" y="2" width="10" height="9" rx="1" />
+              <line x1="1" y1="5" x2="11" y2="5" />
+              <line x1="4" y1="1" x2="4" y2="3" />
+              <line x1="8" y1="1" x2="8" y2="3" />
+            </svg>
+            Calendar
+          </button>
+        </div>
+
         <span className="ml-auto text-xs text-zinc-500">{filtered.length} rows</span>
       </div>
 
+      {/* Calendar view */}
+      {view === 'calendar' && (
+        <CalendarView
+          db={db}
+          filter={filter}
+          saveValue={saveValue}
+        />
+      )}
+
       {/* Table */}
-      <div className={embedded ? 'overflow-visible' : 'flex-1 overflow-auto'}>
+      <div className={`${view === 'calendar' ? 'hidden' : ''} ${embedded ? 'overflow-visible' : 'flex-1 overflow-auto'}`}>
         <table className={`${compact ? 'w-full table-fixed text-xs' : 'w-full text-sm'} border-collapse`}>
           <thead>
             <tr className="border-b border-zinc-800">

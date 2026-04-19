@@ -89,7 +89,7 @@ AVAILABLE ACTIONS
   "chartMetric": "winrate|count"
 }
 
-For trading journals: suggest columns like Direction (select: Long/Short), Entry, SL, TP, Result (select: Win/Loss/Breakeven), Setup, Date, Notes.
+For trading journals: suggest columns like Direction (select: Long/Short), Entry (number), SL (number), TP (number), Result (select: Win/Loss/Breakeven), P&L (number, for profit/loss in money), Setup (text), Date (date), Notes (text). Always include P&L as a number column so the user can track how much money they made or lost per trade.
 For winrate stats: statColumn = result column name, statFilterValue = "Win".
 If creating a table and stat in the same response, use databaseId "__created__" for the stat/chart.
 If the user asks to add a chart/stat for an existing table ("this table", "that table", "already exists"), do NOT create a new table.
