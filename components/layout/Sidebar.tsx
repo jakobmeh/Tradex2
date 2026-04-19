@@ -157,7 +157,6 @@ export default function Sidebar({ workspace, onMobileClose }: { workspace: Works
           {[
             { href: '/dashboard', label: 'Home', icon: '\ud83c\udfe0' },
             { href: '/dashboard/search', label: 'Search', icon: '\ud83d\udd0d' },
-            { href: '/dashboard/alarms', label: 'Reminders', icon: '\u23f0' },
             { href: '/dashboard/settings', label: 'Settings', icon: '\u2699\ufe0f' },
             { href: '/dashboard/trash', label: 'Trash', icon: '\ud83d\uddd1\ufe0f' },
           ].map((item) => (

@@ -16,7 +16,7 @@ export type BlockType =
   | 'database_stat'
   | 'database_chart'
   | 'database_chart_row'
-  | 'alarm'
+  | 'risk_calculator'
 
 export type ChartConfig = {
   chartType: string
@@ -45,6 +45,15 @@ export type BlockContent = {
   chartMetric?: string
   // chart row block
   charts?: (ChartConfig | null)[]
+  // risk calculator block
+  rcMode?: string
+  rcAccount?: string
+  rcRisk?: string
+  rcEntry?: string
+  rcSL?: string
+  rcTP?: string
+  rcPipValue?: string
+  rcPointValue?: string
 }
 
 export type Block = {
@@ -78,5 +87,5 @@ export const BLOCK_MENU: {
   { type: 'database_chart_row', label: 'Chart Row', icon: '▦', description: 'Row of up to 4 mini charts from a table' },
   { type: 'divider', label: 'Divider', icon: '---', description: 'Horizontal line' },
   { type: 'image', label: 'Image', icon: 'Img', description: 'Upload or embed image' },
-  { type: 'alarm', label: 'Reminder', icon: '⏰', description: 'Set an email reminder' },
+  { type: 'risk_calculator', label: 'Risk Calculator', icon: 'R:R', description: 'Calculate risk/reward from Entry, SL, TP' },
 ]
