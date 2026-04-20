@@ -365,7 +365,7 @@ export default function DatabaseChartRowBlock({ databaseId: initialDbId, pageId,
   const load = useCallback(async () => {
     if (!databaseId) return
     try {
-      const res = await fetch(`/api/databases/${databaseId}`)
+      const res = await fetch(`/api/databases/${databaseId}`, { cache: 'no-store' })
       if (!res.ok) return
       const data = await res.json() as { entries: Entry[]; properties: Property[] }
       setEntries(data.entries ?? [])

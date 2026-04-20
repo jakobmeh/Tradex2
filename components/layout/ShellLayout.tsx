@@ -16,13 +16,18 @@ type Workspace = {
   pages: Page[]
   databases: Database[]
 }
+type SharedPage = { id: string; title: string; icon: string | null; sharedBy: { id: string; name: string | null; image: string | null } }
 
 export default function ShellLayout({
   workspace,
   children,
+  isAdmin = false,
+  sharedPages = [],
 }: {
   workspace: Workspace
   children: React.ReactNode
+  isAdmin?: boolean
+  sharedPages?: SharedPage[]
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -59,7 +64,7 @@ export default function ShellLayout({
           mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         ].join(' ')}
       >
-        <Sidebar workspace={workspace} onMobileClose={() => setMobileOpen(false)} />
+        <Sidebar workspace={workspace} isAdmin={isAdmin} sharedPages={sharedPages} onMobileClose={() => setMobileOpen(false)} />
       </div>
 
       <main className="relative flex-1 min-w-0 overflow-y-auto">

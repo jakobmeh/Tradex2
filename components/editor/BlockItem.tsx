@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import EmbeddedDatabaseBlock from './EmbeddedDatabaseBlock'
@@ -10,6 +10,7 @@ import DatabaseChartBlock from '@/components/blocks/DatabaseChartBlock'
 import DatabaseChartRowBlock from '@/components/blocks/DatabaseChartRowBlock'
 import RiskCalculatorBlock from '@/components/blocks/RiskCalculatorBlock'
 import ImageBlock from '@/components/blocks/ImageBlock'
+import EconomicCalendarBlock from './EconomicCalendarBlock'
 import { Block, BlockContent, BlockType } from '@/lib/blocks'
 
 type Props = {
@@ -19,15 +20,17 @@ type Props = {
   onAddAfter: (id: string, type?: BlockType) => void
   onTypeChange: (id: string, type: BlockType) => void
   onCreateDatabaseTable: (id: string, name?: string) => Promise<void>
+  readOnly?: boolean
 }
 
-export default function BlockItem({
+const BlockItem = memo(function BlockItem({
   block,
   onUpdate,
   onDelete,
   onAddAfter,
   onTypeChange,
   onCreateDatabaseTable,
+  readOnly = false,
 }: Props) {
   const content: BlockContent = (() => {
     try {
@@ -182,7 +185,7 @@ export default function BlockItem({
   }
 
   // Both controls in one panel: [✕ remove] [⠿ drag]
-  const blockControls = (
+  const blockControls = readOnly ? null : (
     <div
       className={`absolute -left-[3.75rem] top-0.5 flex items-center gap-0.5 transition-opacity duration-100 ${
         controlsVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
@@ -257,13 +260,14 @@ export default function BlockItem({
         <input
           type="checkbox"
           checked={content.checked ?? false}
-          onChange={e => onUpdate(block.id, { ...content, checked: e.target.checked })}
+          onChange={e => !readOnly && onUpdate(block.id, { ...content, checked: e.target.checked })}
           onPointerDown={e => e.stopPropagation()}
-          className="mt-1 shrink-0 accent-blue-500"
+          disabled={readOnly}
+          className="mt-1 shrink-0 accent-blue-500 disabled:opacity-60"
         />
         <div
           ref={editableRef}
-          contentEditable
+          contentEditable={!readOnly}
           suppressContentEditableWarning
           data-placeholder="To-do..."
           onInput={handleInput}
@@ -298,7 +302,7 @@ export default function BlockItem({
         <span className="mt-0.5 text-xl">!</span>
         <div
           ref={editableRef}
-          contentEditable
+          contentEditable={!readOnly}
           suppressContentEditableWarning
           data-placeholder={getPlaceholder()}
           onInput={handleInput}
@@ -428,6 +432,20 @@ export default function BlockItem({
     )
   }
 
+  if (block.type === 'economic_calendar') {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="relative group py-2"
+        {...sharedHandlers}
+      >
+        {blockControls}
+        <EconomicCalendarBlock />
+      </div>
+    )
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -475,4 +493,6 @@ export default function BlockItem({
 
     </div>
   )
-}
+})
+
+export default BlockItem

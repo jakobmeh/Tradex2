@@ -17,6 +17,7 @@ export type BlockType =
   | 'database_chart'
   | 'database_chart_row'
   | 'risk_calculator'
+  | 'economic_calendar'
 
 export type ChartConfig = {
   chartType: string
@@ -88,4 +89,5 @@ export const BLOCK_MENU: {
   { type: 'divider', label: 'Divider', icon: '---', description: 'Horizontal line' },
   { type: 'image', label: 'Image', icon: 'Img', description: 'Upload or embed image' },
   { type: 'risk_calculator', label: 'Risk Calculator', icon: 'R:R', description: 'Calculate risk/reward from Entry, SL, TP' },
+  { type: 'economic_calendar', label: 'Economic Calendar', icon: '📰', description: 'Forex Factory–style high-impact news events' },
 ]

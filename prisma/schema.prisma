@@ -12,19 +12,27 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(cuid())
-  name                String?
-  email               String?              @unique
-  emailVerified       DateTime?
-  image               String?
-  password            String?              @db.Text
-  role                String               @default("user")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  accounts            Account[]
-  passwordResetTokens PasswordResetToken[]
-  sessions            Session[]
-  workspaceMemberships WorkspaceMember[]
+  id                     String          @id @default(cuid())
+  name                   String?
+  email                  String?         @unique
+  emailVerified          DateTime?
+  image                  String?
+  password               String?         @db.Text
+  role                   String          @default("user")
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+  accounts               Account[]
+  passwordResetTokens    PasswordResetToken[]
+  sessions               Session[]
+  workspaceMemberships   WorkspaceMember[]
+  communityPosts         CommunityPost[]
+  communityLikes         CommunityLike[]
+  sentFriendRequests     Friendship[]    @relation("SentRequests")
+  receivedFriendRequests Friendship[]    @relation("ReceivedRequests")
+  sentMessages           DirectMessage[] @relation("SentMessages")
+  receivedMessages       DirectMessage[] @relation("ReceivedMessages")
+  sharedPages            PageShare[]     @relation("SharedWithUser")
+  sharedByMe             PageShare[]     @relation("SharedByUser")
 }
 
 model Account {
@@ -111,6 +119,7 @@ model Page {
   parent      Page?     @relation("PageChildren", fields: [parentId], references: [id], onDelete: SetNull)
   children    Page[]    @relation("PageChildren")
   blocks      Block[]
+  shares      PageShare[]
 
   @@index([workspaceId, parentId, order])
   @@index([workspaceId, isDeleted])
@@ -200,5 +209,81 @@ model DatabaseView {
   database   Database  @relation(fields: [databaseId], references: [id], onDelete: Cascade)
 
   @@index([databaseId])
+}
+
+model Friendship {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  sender     User     @relation("SentRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+}
+
+model DirectMessage {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, read])
+}
+
+model CommunityPost {
+  id          String          @id @default(cuid())
+  userId      String
+  imageBase64 String?         @db.Text
+  pair        String?
+  direction   String?
+  outcome     String?
+  pnl         Float?
+  description String?         @db.Text
+  status      String          @default("pending")
+  aiReason    String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes       CommunityLike[]
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+model PageShare {
+  id           String   @id @default(cuid())
+  pageId       String
+  sharedById   String
+  sharedWithId String
+  role         String   @default("viewer")
+  createdAt    DateTime @default(now())
+  page         Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  sharedBy     User     @relation("SharedByUser", fields: [sharedById], references: [id], onDelete: Cascade)
+  sharedWith   User     @relation("SharedWithUser", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, sharedWithId])
+  @@index([sharedWithId])
+}
+
+model CommunityLike {
+  id        String        @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime      @default(now())
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
 }
 

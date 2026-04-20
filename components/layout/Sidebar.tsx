@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
@@ -17,6 +17,13 @@ type Database = {
   id: string
   name: string
   icon: string | null
+}
+
+type SharedPage = {
+  id: string
+  title: string
+  icon: string | null
+  sharedBy: { id: string; name: string | null; image: string | null }
 }
 
 type Workspace = {
@@ -57,6 +64,16 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
     router.refresh()
   }
 
+  const deletePage = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    await fetch(`/api/pages/${page.id}`, { method: 'DELETE' })
+    if (pathname === `/dashboard/pages/${page.id}`) {
+      router.push('/dashboard')
+    }
+    router.refresh()
+  }
+
   return (
     <div>
       <div
@@ -81,12 +98,22 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
         </Link>
 
         {hovering ? (
-          <button
-            onClick={createSubPage}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xs text-[#a88a4f] transition hover:bg-[#1a1712] hover:text-[#fff0c7]"
-          >
-            +
-          </button>
+          <>
+            <button
+              onClick={createSubPage}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xs text-[#a88a4f] transition hover:bg-[#1a1712] hover:text-[#fff0c7]"
+              title="New subpage"
+            >
+              +
+            </button>
+            <button
+              onClick={deletePage}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xs text-[#a88a4f] transition hover:bg-[#1a1712] hover:text-red-400"
+              title="Delete page"
+            >
+              🗑
+            </button>
+          </>
         ) : null}
       </div>
 
@@ -101,10 +128,23 @@ function PageItem({ page, depth = 0 }: { page: Page; depth?: number }) {
   )
 }
 
-export default function Sidebar({ workspace, onMobileClose }: { workspace: Workspace; onMobileClose?: () => void }) {
+export default function Sidebar({ workspace, isAdmin = false, sharedPages = [], onMobileClose }: { workspace: Workspace; isAdmin?: boolean; sharedPages?: SharedPage[]; onMobileClose?: () => void }) {
   const router = useRouter()
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch('/api/messages/unread')
+        .then(r => r.json())
+        .then((d: { count: number }) => setUnreadCount(d.count))
+        .catch(() => {})
+    }
+    fetchUnread()
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const createPage = async () => {
     const res = await fetch('/api/pages', {
@@ -156,17 +196,26 @@ export default function Sidebar({ workspace, onMobileClose }: { workspace: Works
         <div className="space-y-1">
           {[
             { href: '/dashboard', label: 'Home', icon: '\ud83c\udfe0' },
+            { href: '/community', label: 'Community', icon: '\ud83c\udf0d' },
+            { href: '/dashboard/friends', label: 'Friends', icon: '\ud83d\udc65' },
+            { href: '/dashboard/messages', label: 'Messages', icon: '\ud83d\udcac', badge: unreadCount },
             { href: '/dashboard/search', label: 'Search', icon: '\ud83d\udd0d' },
             { href: '/dashboard/settings', label: 'Settings', icon: '\u2699\ufe0f' },
             { href: '/dashboard/trash', label: 'Trash', icon: '\ud83d\uddd1\ufe0f' },
+            ...(isAdmin ? [{ href: '/dashboard/admin', label: 'Admin', icon: '\ud83d\udee1\ufe0f', badge: 0 }] : []),
           ].map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${navItemClasses(pathname === item.href)}`}
+              className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition-colors ${navItemClasses(pathname === item.href || pathname.startsWith(item.href + '/') && item.href !== '/dashboard')}`}
             >
               <span className="text-sm">{item.icon}</span>
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge ? (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d5aa5e] px-1 text-[10px] font-bold text-[#140d05]">
+                  {item.badge > 99 ? '99+' : item.badge}
+                </span>
+              ) : null}
             </Link>
           ))}
         </div>
@@ -191,6 +240,34 @@ export default function Sidebar({ workspace, onMobileClose }: { workspace: Works
             )}
           </div>
         </section>
+
+        {sharedPages.length > 0 && (
+          <section className="flex min-h-0 flex-1 flex-col">
+            <div className="mb-2 px-1">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-[#9e8350]/52">Shared with me</p>
+            </div>
+            <div className="space-y-1">
+              {sharedPages.map((page) => {
+                const isActive = pathname === `/dashboard/pages/${page.id}`
+                return (
+                  <Link
+                    key={page.id}
+                    href={`/dashboard/pages/${page.id}`}
+                    className={`flex flex-col rounded-xl border px-2 py-1.5 text-sm transition-colors ${navItemClasses(isActive)}`}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="text-sm">{page.icon ?? '📄'}</span>
+                      <span className="truncate">{page.title || 'Untitled'}</span>
+                    </div>
+                    <p className="mt-0.5 truncate pl-6 text-[10px] text-[#8d7547]">
+                      shared by {page.sharedBy.name ?? 'Unknown'}
+                    </p>
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )}
       </div>
 
       <div className="border-t border-[#6f592d]/18 p-3 space-y-2">

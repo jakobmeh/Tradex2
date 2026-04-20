@@ -64,6 +64,7 @@ export default function DatabaseTable({ initial, embedded = false }: { initial: 
         ...p,
         entries: p.entries.map(e => e.id === tempId ? entry : e),
       }))
+      notify(db.id)
     } catch {
       // Rollback
       setDb(p => ({ ...p, entries: p.entries.filter(e => e.id !== tempId) }))
@@ -76,6 +77,7 @@ export default function DatabaseTable({ initial, embedded = false }: { initial: 
     setDb((p) => ({ ...p, entries: p.entries.filter((e) => e.id !== id) }))
     if (!id.startsWith('temp_')) {
       await fetch(`/api/entries/${id}`, { method: 'DELETE' })
+      notify(db.id)
     }
   }
 

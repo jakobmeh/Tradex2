@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -26,6 +26,7 @@ type Props = {
   pageId: string
   pageTitle?: string
   initialBlocks?: Block[]
+  readOnly?: boolean
 }
 
 type ChatBlockRef = {
@@ -73,7 +74,8 @@ function DragGhost({ block }: { block: Block }) {
   return <span className="text-zinc-300 text-sm">{text || '...'}</span>
 }
 
-export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlocks = [] }: Props) {
+export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlocks = [], readOnly = false }: Props) {
+  const dndContextId = useId()
   const [blocks, setBlocks] = useState<BlockEntry[]>(() => initialBlocks.map(toEntry))
   const [loading, setLoading] = useState(initialBlocks.length === 0)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -211,6 +213,8 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
     async function bootstrapEmptyPage() {
       try {
         await addBlock('text', null, true)
+      } catch {
+        // ignore — page will just start empty
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -220,18 +224,23 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
     return () => { cancelled = true }
   }, [addBlock, initialBlocks])
 
-  const updateBlock = useCallback(async (id: string, content: BlockContent) => {
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
+
+  const updateBlock = useCallback((id: string, content: BlockContent) => {
     setBlocks(prev => prev.map(block => (
       block.id === id ? { ...block, content: JSON.stringify(content) } : block
     )))
 
     if (id.startsWith('temp_')) return
 
-    await fetch(`/api/blocks/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: JSON.stringify(content) }),
-    })
+    if (saveTimers.current[id]) clearTimeout(saveTimers.current[id])
+    saveTimers.current[id] = setTimeout(() => {
+      void fetch(`/api/blocks/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: JSON.stringify(content) }),
+      })
+    }, 400)
   }, [])
 
   const deleteBlock = useCallback(async (id: string) => {
@@ -447,6 +456,7 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
   return (
     <>
       <DndContext
+        id={dndContextId}
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
@@ -463,19 +473,22 @@ export default function BlockEditor({ pageId, pageTitle = 'Untitled', initialBlo
                   onAddAfter={id => addBlock('text', id)}
                   onTypeChange={changeType}
                   onCreateDatabaseTable={createDatabaseTableBlock}
+                  readOnly={readOnly}
                 />
               </div>
             ))}
 
-            <div className="pt-4">
-              <button
-                type="button"
-                onClick={() => void addBlock('text')}
-                className="w-full rounded-lg border border-dashed border-zinc-800 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:border-zinc-700 hover:bg-zinc-900/60 hover:text-white"
-              >
-                + Add block
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="pt-4">
+                <button
+                  type="button"
+                  onClick={() => void addBlock('text')}
+                  className="w-full rounded-lg border border-dashed border-zinc-800 px-3 py-2 text-left text-sm text-zinc-500 transition-colors hover:border-zinc-700 hover:bg-zinc-900/60 hover:text-white"
+                >
+                  + Add block
+                </button>
+              </div>
+            )}
           </div>
         </SortableContext>
 
