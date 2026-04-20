@@ -14,6 +14,7 @@ export default async function MessagesPage() {
   const messages = await prisma.directMessage.findMany({
     where: { OR: [{ senderId: me }, { receiverId: me }] },
     orderBy: { createdAt: 'desc' },
+    take: 500,
     include: {
       sender: { select: { id: true, name: true, image: true } },
       receiver: { select: { id: true, name: true, image: true } },
@@ -82,7 +83,7 @@ export default async function MessagesPage() {
               className={`flex items-center gap-3 px-4 py-3.5 transition hover:bg-zinc-800/50 ${i !== 0 ? 'border-t border-zinc-800' : ''} ${unread ? 'bg-zinc-900/60' : ''}`}
             >
               {user.image ? (
-                <Image src={user.image} alt={user.name ?? ''} width={40} height={40} className="rounded-full shrink-0 object-cover" />
+                <Image src={user.image} alt={user.name ?? ''} width={40} height={40} sizes="40px" className="rounded-full shrink-0 object-cover" />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-bold text-zinc-300">
                   {user.name?.charAt(0).toUpperCase() ?? '?'}

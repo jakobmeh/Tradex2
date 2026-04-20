@@ -14,7 +14,7 @@ type Message = {
 }
 
 function Avatar({ user, size = 32 }: { user: MessageUser; size?: number }) {
-  if (user.image) return <Image src={user.image} alt={user.name ?? ''} width={size} height={size} className="rounded-full shrink-0 object-cover" style={{ width: size, height: size }} />
+  if (user.image) return <Image src={user.image} alt={user.name ?? ''} width={size} height={size} sizes={`${size}px`} className="rounded-full shrink-0 object-cover" style={{ width: size, height: size }} />
   return (
     <div className="flex shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300" style={{ width: size, height: size }}>
       {user.name?.charAt(0).toUpperCase() ?? '?'}

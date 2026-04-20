@@ -42,7 +42,7 @@ export default function SettingsClient({ workspace, user }: { workspace: Workspa
           <p className="text-xs uppercase tracking-[0.28em] text-[#cfb16e]/54">Profile</p>
           <div className="mt-5 flex items-center gap-4">
             {user.image ? (
-              <Image src={user.image} alt="" width={64} height={64} className="h-16 w-16 rounded-full border border-[#7e6330]/20 object-cover" />
+              <Image src={user.image} alt="" width={64} height={64} sizes="64px" className="h-16 w-16 rounded-full border border-[#7e6330]/20 object-cover" />
             ) : (
               <div className="flex h-16 w-16 items-center justify-center rounded-full border border-[#7e6330]/20 bg-[linear-gradient(180deg,rgba(34,34,34,0.96),rgba(10,10,10,0.98))] text-2xl text-[#f0d289]">
                 {user.name?.[0] ?? '?'}

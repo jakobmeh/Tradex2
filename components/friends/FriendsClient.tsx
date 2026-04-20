@@ -17,7 +17,7 @@ type Props = {
 function Avatar({ user, size = 36 }: { user: FriendUser; size?: number }) {
   const initials = user.name?.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() ?? '?'
   if (user.image) {
-    return <Image src={user.image} alt={user.name ?? ''} width={size} height={size} className="rounded-full shrink-0 object-cover" style={{ width: size, height: size }} />
+    return <Image src={user.image} alt={user.name ?? ''} width={size} height={size} sizes={`${size}px`} className="rounded-full shrink-0 object-cover" style={{ width: size, height: size }} />
   }
   return (
     <div className="flex shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300" style={{ width: size, height: size }}>

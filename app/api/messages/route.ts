@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
   const messages = await prisma.directMessage.findMany({
     where: { OR: [{ senderId: me }, { receiverId: me }] },
     orderBy: { createdAt: 'desc' },
+    take: 500,
     include: {
       sender: { select: { id: true, name: true, image: true } },
       receiver: { select: { id: true, name: true, image: true } },

@@ -195,7 +195,7 @@ export default function AdminPanel({ initialPosts, initialUsers }: Props) {
           {users.map(user => (
             <div key={user.id} className="flex items-center gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
               {user.image ? (
-                <Image src={user.image} alt={user.name ?? ''} width={36} height={36} className="rounded-full shrink-0" />
+                <Image src={user.image} alt={user.name ?? ''} width={36} height={36} sizes="36px" className="rounded-full shrink-0" />
               ) : (
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
                   {user.name?.charAt(0).toUpperCase() ?? '?'}

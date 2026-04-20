@@ -178,9 +178,9 @@ export default function Sidebar({ workspace, isAdmin = false, sharedPages = [], 
             <p className="text-[10px] uppercase tracking-[0.32em] text-[#b6985d]/58">
               Workspace
             </p>
-            <div className="mt-2 flex items-center gap-2 truncate">
-              <span className="text-lg">{workspace.icon ?? '\ud83c\udfe0'}</span>
-              <span className="truncate text-sm font-medium text-[#fff0c7]">{workspace.name}</span>
+            <div className="mt-2 flex items-center gap-2.5 truncate">
+              <span className="text-2xl">{workspace.icon ?? '\ud83c\udfe0'}</span>
+              <span className="truncate text-base font-semibold tracking-tight text-[#fff0c7]">{workspace.name}</span>
             </div>
           </div>
           <button

@@ -12,7 +12,7 @@ type Page = { id: string; title: string; icon: string | null }
 type Friend = { id: string; name: string | null; image: string | null }
 
 function FriendAvatar({ f }: { f: Friend }) {
-  if (f.image) return <Image src={f.image} alt={f.name ?? ''} width={28} height={28} className="rounded-full shrink-0 object-cover" />
+  if (f.image) return <Image src={f.image} alt={f.name ?? ''} width={28} height={28} sizes="28px" className="rounded-full shrink-0 object-cover" />
   return (
     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-xs font-bold text-zinc-300">
       {f.name?.charAt(0).toUpperCase() ?? '?'}

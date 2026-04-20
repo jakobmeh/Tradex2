@@ -81,7 +81,7 @@ export default async function Home() {
         <div className="absolute bottom-0 left-1/4 h-[400px] w-[600px] rounded-full bg-[#4a3a14] opacity-[0.05] blur-[100px]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6 py-20">
+      <div className="relative mx-auto max-w-6xl px-6 pt-6 pb-20">
         {/* Nav */}
         <nav className="mb-20 flex items-center justify-between">
           <Image
@@ -90,7 +90,7 @@ export default async function Home() {
             width={600}
             height={600}
             priority
-            className="h-[44px] w-auto object-contain"
+            className="h-[128px] w-auto object-contain"
           />
           <div className="flex items-center gap-3">
             {session?.user ? (
